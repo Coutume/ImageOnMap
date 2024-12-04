@@ -36,10 +36,14 @@
 
 package fr.moribus.imageonmap.gui;
 
+import static fr.zcraft.quartzlib.tools.reflection.Reflection.getFieldValue;
+
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.map.ImageMap;
+import fr.moribus.imageonmap.map.MapManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.moribus.imageonmap.ui.MapItemManager;
+import fr.moribus.imageonmap.ui.SplatterMapManager;
 import fr.zcraft.quartzlib.components.gui.ExplorerGui;
 import fr.zcraft.quartzlib.components.gui.Gui;
 import fr.zcraft.quartzlib.components.gui.GuiAction;
@@ -52,6 +56,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 
 public class MapDetailGui extends ExplorerGui<Integer> {
@@ -66,11 +71,43 @@ public class MapDetailGui extends ExplorerGui<Integer> {
         this.name = name;
     }
 
+    private void setMapPartCustomModelData(ItemStack item, int x, int y) {
+        int id = 1000;
+        ItemMeta meta = item.getItemMeta();
+
+
+        String mapId = map.getId();
+        //TODO make it prettier and fix issues with scrolling
+        if (map instanceof PosterMap) {
+            PosterMap poster = ((PosterMap) map);
+            int columnCount = poster.getColumnCount();
+            int rowCount = poster.getRowCount();
+            if (columnCount == 0 && rowCount == 0) {
+                id = 1008;
+            }
+            if (x == 0 && y == 0 && columnCount > 0 && rowCount > 0) {
+                id = 1001;
+            }
+
+
+
+
+            meta.setCustomModelData(1000);
+            item.setItemMeta(meta);
+            PluginLogger.info(item.getItemMeta().toString());
+        }
+    }
+
     @Override
     protected ItemStack getViewItem(int x, int y) {
         final Material partMaterial = y % 2 == x % 2 ? Material.MAP : Material.PAPER;
+        ItemStackBuilder builder = new ItemStackBuilder(partMaterial);
+        ItemStack itemStack = builder.craftItem();
+        PluginLogger.info("before setmappart");
 
-        final ItemStackBuilder builder = new ItemStackBuilder(partMaterial)
+        setMapPartCustomModelData(itemStack, x, y);
+        builder = new ItemStackBuilder(itemStack);
+        builder = builder
                 .title(I.t(getPlayerLocale(), "{green}Map part"))
                 .lore(I.t(getPlayerLocale(), "{gray}Row: {white}{0}", y + 1))
                 .lore(I.t(getPlayerLocale(), "{gray}Column: {white}{0}", x + 1));
@@ -121,11 +158,11 @@ public class MapDetailGui extends ExplorerGui<Integer> {
         return MapItemManager.createMapItem(poster, poster.getIndex(mapId));
     }
 
-    /*    @Override
-        protected ItemStack getEmptyViewItem() {
-            return super.getEmptyViewItem();
-        }
-    */
+    @Override
+    protected ItemStack getEmptyViewItem() {
+        return super.getEmptyViewItem();
+    }
+
     @Override
     protected void onUpdate() {
         /// Title of the map details GUI

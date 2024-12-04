@@ -46,11 +46,13 @@ import fr.moribus.imageonmap.ui.SplatterMapManager;
 import fr.zcraft.quartzlib.components.gui.ExplorerGui;
 import fr.zcraft.quartzlib.components.gui.Gui;
 import fr.zcraft.quartzlib.components.i18n.I;
+import fr.zcraft.quartzlib.tools.PluginLogger;
 import fr.zcraft.quartzlib.tools.items.ItemStackBuilder;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.MapMeta;
 
 
@@ -80,8 +82,15 @@ public class MapListGui extends ExplorerGui<ImageMap> {
             /// Displayed subtitle description of a poster map without column data on the list GUI
             mapDescription = I.tl(getPlayerLocale(), "{white}Poster map ({0} parts)", poster.getMapCount());
         }
-
-        ItemStackBuilder builder = new ItemStackBuilder(Material.FILLED_MAP)
+        ItemStackBuilder builder =
+                new ItemStackBuilder(Material.FILLED_MAP);
+        ItemStack item = builder.craftItem();
+        ItemMeta itemMeta = item.getItemMeta();
+        itemMeta.setCustomModelData(1);
+        item.setItemMeta(itemMeta);
+        PluginLogger.info(item.getItemMeta().toString());
+        builder = new ItemStackBuilder(item);
+        builder = builder
                 /// Displayed title of a map on the list GUI
                 .title(I.tl(getPlayerLocale(), "{green}{bold}{0}", map.getName()))
 

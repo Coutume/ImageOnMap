@@ -65,6 +65,31 @@ import java.util.HashMap;
 import java.util.Map;
 import org.bstats.bukkit.Metrics;
 
+//TODO ERROR when loading plugin org.bukkit.plugin.InvalidPluginException: java.lang.NoClassDefFoundError:
+// fr/zcraft/imageonmap/quartzlib/core/QuartzPlugin
+//TODO list: bug sur supprimer map si coin manquant, passer en position au lieu de frame;
+// repair fonction permet avec la carte en main si clic droit de réparer (permission);
+// replace IG si clic droit alors remplacer le dessin si meme taille sinon mettre un message erreur;
+// bug: pas de message d'erreur si pas assez de place;
+// finir déploiement plus efficace des cartes;
+// bug rotation des frames au sol et plafond (faire un fix mieux que juste mettre x rotation);
+// continuer rework des commandes;
+// GUI permettre de changer objets utilisés et ajouter ressource pack;
+// rework des GUI (map part utile ???);
+// Pouvoir déployer carte à distance;
+// carte interractive (5.1?);
+// bug: hover text ne marche plus;
+// glow effect a refaire (vraiment utile ???);
+// Miniature des maps en 1x1 (migration?);
+// ecrire directement sur les cartes pour ne pas tout perdre(migration);
+// réduire dépendance QL;
+// retirer les prints de QL et IoM => verbose ou debug pour avoir une trace de ce qui est fait ?;
+// bug: suppression image chat (inconnue ?) laisse item frame invisible;
+// passer invisibiliter et glow dans le GUI si permission sinon solution RP avec le nombre qu'il faut de glowsac
+// avec un clic droit sur les frames et fenetre en verre pour la protection contre le grief des mobs et potion
+// invisibilité pour rendre frame invisible (peut etre que l'item utilisé pour le craft); proposer craft RP des cartes
+// soit avec un item map vide+ un item de peintre ? soit avec un atelier?
+// soit avec certains objets simple dans inventaire
 public final class ImageOnMap extends QuartzPlugin {
     private static final String IMAGES_DIRECTORY_NAME = "images";
     private static final String RENDERS_DIRECTORY_NAME = "renders";
@@ -111,7 +136,7 @@ public final class ImageOnMap extends QuartzPlugin {
         return commandWorker;
     }
 
-    private Map<String,File> checkDirs() throws IOException {
+    private Map<String, File> checkDirs() throws IOException {
         Map<String, File> dirs = new HashMap<>();
         dirs.put("mapsDirectory", checkPluginDirectory(mapsDirectory));
         dirs.put("rendersDirectory", checkPluginDirectory(rendersDirectory));

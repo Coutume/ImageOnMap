@@ -43,6 +43,7 @@ import fr.moribus.imageonmap.map.MapManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.tools.PluginLogger;
+import fr.zcraft.quartzlib.tools.items.GlowEffect;
 import fr.zcraft.quartzlib.tools.items.ItemStackBuilder;
 import fr.zcraft.quartzlib.tools.runners.RunTask;
 import fr.zcraft.quartzlib.tools.text.MessageSender;
@@ -56,17 +57,14 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Rotation;
 import org.bukkit.block.BlockFace;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.MapMeta;
 
-//TODO rework splatter effect, using ID is far more stable than nbt tags.
-// To update when adding small picture snapshot.
+// TODO update when adding small picture snapshot.
 public abstract class SplatterMapManager {
     private SplatterMapManager() {
     }
@@ -126,8 +124,8 @@ public abstract class SplatterMapManager {
      * @return The modified item stack. The instance may be different if the passed item stack is not a craft itemstack.
      */
     public static ItemStack addSplatterAttribute(final ItemStack itemStack) {
-        itemStack.addUnsafeEnchantment(Enchantment.LURE, 1);
-        //TODO check if safe guard for duplication XP still works
+        GlowEffect.addGlow(itemStack);
+        //TODO find a good solution there
         return itemStack;
     }
 
@@ -143,20 +141,6 @@ public abstract class SplatterMapManager {
     }
 
     /**
-     * Return true if it is a splatter map
-     *
-     * @param itemStack The item to check.
-     * @return True if is a splatter map
-     */
-    public static boolean isSplatterMap(ItemStack itemStack) {
-        if (itemStack == null) {
-            return false;
-        }
-        return hasSplatterAttributes(itemStack) && MapManager.managesMap(itemStack);
-    }
-
-
-    /**
      * Return true if it has a specified splatter map
      *
      * @param player The player to check.
@@ -168,7 +152,7 @@ public abstract class SplatterMapManager {
 
         for (int i = 0; i < playerInventory.getSize(); ++i) {
             ItemStack item = playerInventory.getItem(i);
-            if (isSplatterMap(item) && map.managesMap(item)) {
+            if (hasSplatterAttributes(item) && map.managesMap(item)) {
                 return true;
             }
         }
@@ -212,57 +196,63 @@ public abstract class SplatterMapManager {
 
                 return false;
             }
+            Rotation r = Rotation.NONE;
+            BlockFace bf = WorldUtils.get4thOrientation(player.getLocation());
+            PluginLogger.info("bf " + bf);
+            PluginLogger.info("YAW calc {0} YAW {1} ", Math.abs(player.getLocation().getYaw()) - 180f,
+                    player.getLocation().getYaw());
+            switch (bf) {
+                case NORTH:
+                    break;
+                case EAST:
+                    r = r.rotateClockwise();
+                    break;
+                case WEST:
+                    r = r.rotateCounterClockwise();
+                    break;
+                case SOUTH:
+                    r = r.rotateClockwise();
+                    r = r.rotateClockwise();
+                    break;
+
+                default:
+                    throw new IllegalStateException("Unexpected value: " + bf);
+            }
 
             int i = 0;
             for (ItemFrame frame : surface.frames) {
-                Rotation rot = Rotation.NONE;
+
+                bf = WorldUtils.get4thOrientation(player.getLocation());
+                int id = poster.getMapIdAtReverseZ(i, bf, startFrame.getFacing());
+                setupMap(player, frame, id);
                 switch (frame.getFacing()) {
                     case UP:
                         break;
                     case DOWN:
-                        rot = Rotation.FLIPPED;
+                        r = r.rotateClockwise().rotateClockwise(); //Invert
                         break;
                     default:
-                        //throw new IllegalStateException("Unexpected value: " + frame.getFacing());
+                        throw new IllegalStateException("Unexpected value: " + frame.getFacing());
                 }
-                BlockFace bf = WorldUtils.get4thOrientation(player.getLocation());
-                int id = poster.getMapIdAtReverseZ(i, bf, startFrame.getFacing());
-                //Rotation management relative to player rotation the default position is North,
-                // when on ceiling we flipped the rotation
-
-                setupMap(player, frame, id);
-
-                if (i == 0) {
+                frame.setRotation(r);
+                /*if (i == 0) {
                     //First map need to be rotate one time CounterClockwise
-                    rot = rot.rotateCounterClockwise();
-                }
-
-                switch (bf) {
-                    case NORTH:
-                        if (frame.getFacing() == BlockFace.DOWN) {
-                            rot = rot.rotateClockwise();
-                            rot = rot.rotateClockwise();
-                        }
-                        frame.setRotation(rot);
-                        break;
-                    case EAST:
-                        rot = rot.rotateClockwise();
-                        frame.setRotation(rot);
-                        break;
-                    case SOUTH:
-                        if (frame.getFacing() == BlockFace.UP) {
-                            rot = rot.rotateClockwise();
-                            rot = rot.rotateClockwise();
-                        }
-                        frame.setRotation(rot);
-                        break;
-                    case WEST:
-                        rot = rot.rotateCounterClockwise();
-                        frame.setRotation(rot);
-                        break;
-                    default:
-                        throw new IllegalStateException("Unexpected value: " + bf);
-                }
+                    switch (bf) {
+                        case EAST:
+                            frame.setRotation(r.rotateClockwise());
+                            break;
+                        case WEST:
+                            frame.setRotation(r.rotateCounterClockwise());
+                            break;
+                        case SOUTH:
+                            frame.setRotation(r.rotateClockwise().rotateClockwise());
+                            break;
+                        case NORTH:
+                            break;
+                        default:
+                            throw new IllegalStateException("Unexpected value: " + frame.getFacing());
+                    }
+                }*/
 
                 MapInitEvent.initMap(id);
                 i++;

@@ -63,7 +63,8 @@ public enum Permissions {
     BYPASS_MAP_LIMIT("imageonmap.bypassmaplimit"),
     GIVE("imageonmap.give"),
     BYPASS_WHITELIST("imageonmap.bypasswhitelist"),
-    REMOTE_PLACING("imageonmap.remoteplacing");
+    REMOTE_PLACING("imageonmap.remoteplacing"),
+    REPAIR_MAP("imageonmap.repairmap");
 
     private final String permission;
     private final String[] aliases;

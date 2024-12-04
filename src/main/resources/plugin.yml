@@ -46,6 +46,7 @@ permissions:
       imageonmap.bypasswhitelist: true
       imageonmap.placeinvisiblesplattermap: true
       imageonmap.remoteplacing: false
+      imageonmap.repairmap: true
 
   imageonmap.userender:
     description: "Allows you to use /tomap and related commands (/maptool getremaining). Alias of imageonmap.new."

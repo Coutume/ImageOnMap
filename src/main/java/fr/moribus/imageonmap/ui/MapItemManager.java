@@ -42,6 +42,7 @@ import fr.moribus.imageonmap.map.MapManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.core.QuartzLib;
+import fr.zcraft.quartzlib.tools.PluginLogger;
 import fr.zcraft.quartzlib.tools.items.ItemStackBuilder;
 import fr.zcraft.quartzlib.tools.items.ItemUtils;
 import fr.zcraft.quartzlib.tools.runners.RunTask;
@@ -287,7 +288,7 @@ public class MapItemManager implements Listener {
         }
 
         if (Permissions.REMOVE_SPLATTER_MAP.grantedTo(player) && player.isSneaking()) {
-
+            PluginLogger.info("Frame " + frame);
             PosterMap poster = SplatterMapManager.removeSplatterMap(frame, player);
             if (poster != null) {
                 event.setCancelled(true);
