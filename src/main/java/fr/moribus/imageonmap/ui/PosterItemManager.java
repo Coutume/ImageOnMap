@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,16 +36,16 @@
 
 package fr.moribus.imageonmap.ui;
 
+import fr.moribus.imageonmap.ImageOnMap;
 import fr.moribus.imageonmap.Permissions;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.core.QuartzLib;
 import fr.zcraft.quartzlib.tools.PluginLogger;
 import fr.zcraft.quartzlib.tools.items.ItemStackBuilder;
 import fr.zcraft.quartzlib.tools.items.ItemUtils;
-import fr.zcraft.quartzlib.tools.runners.RunTask;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Queue;
@@ -69,13 +69,14 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.MapMeta;
+import org.bukkit.scheduler.BukkitScheduler;
 
-public class MapItemManager implements Listener {
+public class PosterItemManager implements Listener {
     private static HashMap<UUID, Queue<ItemStack>> mapItemCache;
 
     public static void init() {
         mapItemCache = new HashMap<>();
-        QuartzLib.registerEvents(new MapItemManager());
+        QuartzLib.registerEvents(new PosterItemManager());
     }
 
     public static void exit() {
@@ -85,24 +86,24 @@ public class MapItemManager implements Listener {
         mapItemCache = null;
     }
 
-    public static boolean give(Player player, ImageMap map) {
-        if (map instanceof PosterMap) {
-            return give(player, (PosterMap) map);
+    public static boolean give(Player player, ImagePoster poster) {
+        if (poster instanceof PosterMap) {
+            return give(player, (PosterMap) poster);
         }
         return false;
     }
 
 
-    public static boolean give(Player player, PosterMap map) {
-        if (!map.hasColumnData()) {
-            return giveParts(player, map);
+    public static boolean give(Player player, PosterMap poster) {
+        if (!poster.hasColumnData()) {
+            return giveParts(player, poster);
         }
-        return give(player, SplatterMapManager.makeSplatterMap(map));
+        return give(player, SplatterPosterManager.makeSplatterPoster(poster));
     }
 
     private static boolean give(final Player player, final ItemStack item) {
         boolean given = ItemUtils.give(player, item);
-
+        //TODO simplify this
         if (given) {
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 1, 1);
         }
@@ -110,14 +111,15 @@ public class MapItemManager implements Listener {
         return !given;
     }
 
-    public static boolean giveParts(Player player, PosterMap map) {
+    public static boolean giveParts(Player player, PosterMap poster) {
         boolean inventoryFull = false;
 
-        ItemStack mapPartItem;
-        for (int i = 0, c = map.getMapCount(); i < c; i++) {
-            mapPartItem = map.hasColumnData() ? createMapItem(map, map.getColumnAt(i), map.getRowAt(i)) :
-                    createMapItem(map, i);
-            inventoryFull = give(player, mapPartItem) || inventoryFull;
+        ItemStack posterPartItem;
+        for (int i = 0, c = poster.getPosterCount(); i < c; i++) {
+            posterPartItem = poster.hasColumnData() ? createPosterItem(poster, poster.getColumnAt(i),
+                    poster.getRowAt(i)) :
+                    createPosterItem(poster, i);
+            inventoryFull = give(player, posterPartItem) || inventoryFull;
         }
 
         return inventoryFull;
@@ -136,64 +138,65 @@ public class MapItemManager implements Listener {
         return givenItemsCount;
     }
 
-    public static ItemStack createMapItem(PosterMap map, int index) {
-        return createMapItem(map.getMapIdAt(index), getMapTitle(map, index), true);
+    public static ItemStack createPosterItem(PosterMap poster, int index) {
+        return createPosterItem(poster.getPosterIdAt(index), getPosterTitle(poster, index), true);
     }
 
-    public static ItemStack createMapItem(PosterMap map, int x, int y) {
-        return createMapItem(map.getMapIdAt(x, y), getMapTitle(map, y, x), true);
+    public static ItemStack createPosterItem(PosterMap poster, int x, int y) {
+        return createPosterItem(poster.getPosterIdAt(x, y), getPosterTitle(poster, y, x), true);
     }
 
-    public static ItemStack createMapItem(int mapID, String text, boolean isMapPart) {
-        return createMapItem(mapID, text, isMapPart, false);
+    public static ItemStack createPosterItem(int posterID, String text, boolean isPosterPart) {
+        return createPosterItem(posterID, text, isPosterPart, false);
     }
 
-    public static ItemStack createMapItem(int mapID, String text, boolean isMapPart, boolean goldTitle) {
-        ItemStack mapItem;
+    public static ItemStack createPosterItem(int posterID, String text, boolean isPosterPart, boolean goldTitle) {
+        ItemStack posterItem;
         if (text == "") {
-            mapItem = new ItemStackBuilder(Material.FILLED_MAP)
+            posterItem = new ItemStackBuilder(Material.FILLED_MAP)
                     .hideAllAttributes()
                     .item();
         } else {
             if (goldTitle) {
-                mapItem = new ItemStackBuilder(Material.FILLED_MAP)
+                posterItem = new ItemStackBuilder(Material.FILLED_MAP)
                         .title(ChatColor.GOLD, text)
                         .hideAllAttributes()
                         .item();
             } else {
-                mapItem = new ItemStackBuilder(Material.FILLED_MAP)
+                posterItem = new ItemStackBuilder(Material.FILLED_MAP)
                         .title(text)
                         .hideAllAttributes()
                         .item();
             }
         }
 
-        final MapMeta meta = (MapMeta) mapItem.getItemMeta();
-        meta.setMapId(mapID);
-        meta.setColor(isMapPart ? Color.LIME : Color.GREEN);
-        mapItem.setItemMeta(meta);
-        return mapItem;
+        final MapMeta meta = (MapMeta) posterItem.getItemMeta();
+        meta.setMapId(posterID);
+        meta.setColor(isPosterPart ? Color.LIME : Color.GREEN);
+        posterItem.setItemMeta(meta);
+        return posterItem;
     }
 
-    public static String getMapTitle(PosterMap map, int row, int column) {
-        /// The name of a map item given to a player, if splatter maps are not used. 0 = map name; 1 = row; 2 = column.
-        return I.t("{0} (row {1}, column {2})", map.getName(), row + 1, column + 1);
+    public static String getPosterTitle(PosterMap poster, int row, int column) {
+        // The name of a poster item given to a player, if splatter posters are not used.
+        // 0 = poster name; 1 = row; 2 = column.
+        return I.t("{0} (row {1}, column {2})", poster.getName(), row + 1, column + 1);
     }
 
-    public static String getMapTitle(PosterMap map, int index) {
-        /// The name of a map item given to a player, if splatter maps are not used. 0 = map name; 1 = index.
-        return I.t("{0} (part {1})", map.getName(), index + 1);
+    public static String getPosterTitle(PosterMap poster, int index) {
+        // The name of a poster item given to a player, if splatter posters are not used. 0 = poster name; 1 = index.
+        return I.t("{0} (part {1})", poster.getName(), index + 1);
     }
 
-    private static String getMapTitle(ItemStack item) {
-        ImageMap map = MapManager.getMap(item);
-        PosterMap poster = (PosterMap) map;
-        int index = poster.getIndex(MapManager.getMapIdFromItemStack(item));
+    private static String getPosterTitle(ItemStack item) {
+        ImagePoster iposter = PosterManager.getPoster(item);
+        PosterMap poster = (PosterMap) iposter;
+        int index = poster.getIndex(PosterManager.getPosterIDFromItemStack(item));
         if (poster.hasColumnData()) {
-            return getMapTitle(poster, poster.getRowAt(index), poster.getColumnAt(index));
+            return getPosterTitle(poster, poster.getRowAt(index), poster.getColumnAt(index));
         }
 
-        return getMapTitle(poster, index);
+        return getPosterTitle(poster, index);
         //}
     }
 
@@ -202,21 +205,21 @@ public class MapItemManager implements Listener {
     /**
      * Returns the item to place to display the (col;row) part of the given poster.
      *
-     * @param map The map to take the part from.
+     * @param poster The map to take the part from.
      * @param x   The x coordinate of the part to display. Starts at 0.
      * @param y   The y coordinate of the part to display. Starts at 0.
      * @return The map.
      * @throws ArrayIndexOutOfBoundsException If x;y is not inside the map.
      */
-    public static ItemStack createSubMapItem(ImageMap map, int x, int y) {
-        if (map instanceof PosterMap && ((PosterMap) map).hasColumnData()) {
-            return MapItemManager.createMapItem((PosterMap) map, x, y);
+    public static ItemStack createSubPosterItem(ImagePoster poster, int x, int y) {
+        if (poster instanceof PosterMap && ((PosterMap) poster).hasColumnData()) {
+            return PosterItemManager.createPosterItem((PosterMap) poster, x, y);
         } else {
             if (x != 0 || y != 0) {
                 throw new ArrayIndexOutOfBoundsException(); // Coherence
             }
 
-            return createMapItem(map.getMapsIDs()[0], map.getName(), false);
+            return createPosterItem(poster.getPostersIDs()[0], poster.getName(), false);
         }
     }
 
@@ -234,24 +237,24 @@ public class MapItemManager implements Listener {
     }
 
     private static void onItemFramePlace(ItemFrame frame, Player player, PlayerInteractEntityEvent event) {
-        final ItemStack mapItem = player.getInventory().getItemInMainHand();
+        final ItemStack posterItem = player.getInventory().getItemInMainHand();
 
         if (frame.getItem().getType() != Material.AIR) {
             return;
         }
-        if (!MapManager.managesMap(mapItem)) {
+        if (!PosterManager.managesPoster(posterItem)) {
             return;
         }
 
-        if (!Permissions.PLACE_SPLATTER_MAP.grantedTo(player)) {
+        if (!Permissions.PLACE_SPLATTER_POSTER.grantedTo(player)) {
             player.sendMessage(I.t(ChatColor.RED + "You do not have permission to place splatter maps."));
             event.setCancelled(true);
             return;
         }
 
         frame.setItem(new ItemStack(Material.AIR));
-        if (SplatterMapManager.hasSplatterAttributes(mapItem)) {
-            if (!SplatterMapManager.placeSplatterMap(frame, player, event)) {
+        if (SplatterPosterManager.hasSplatterAttributes(posterItem)) {
+            if (!SplatterPosterManager.placeSplatterPoster(frame, player, event)) {
 
                 event.setCancelled(true); //In case of an error allow to cancel map placement
                 return;
@@ -267,18 +270,18 @@ public class MapItemManager implements Listener {
             }
 
 
-            final ItemStack frameItem = mapItem.clone();
+            final ItemStack frameItem = posterItem.clone();
             final ItemMeta meta = frameItem.getItemMeta();
 
             meta.setDisplayName(null);
             frameItem.setItemMeta(meta);
-            RunTask.later(() -> {
+            BukkitScheduler scheduler = ImageOnMap.getPlugin().getServer().getScheduler();
+            scheduler.scheduleSyncDelayedTask(ImageOnMap.getPlugin(), () -> {
                 frame.setItem(frameItem);
                 frame.setRotation(Rotation.NONE);
             }, 5L);
-
         }
-        //ItemUtils.consumeItem(player, mapItem); //useless no?
+        //ItemUtils.consumeItem(player, mapItem); //todo useless ?
     }
 
     private static void onItemFrameRemove(ItemFrame frame, Player player, EntityDamageByEntityEvent event) {
@@ -287,14 +290,14 @@ public class MapItemManager implements Listener {
             return;
         }
 
-        if (Permissions.REMOVE_SPLATTER_MAP.grantedTo(player) && player.isSneaking()) {
+        if (Permissions.REMOVE_SPLATTER_POSTER.grantedTo(player) && player.isSneaking()) {
             PluginLogger.info("Frame " + frame);
-            PosterMap poster = SplatterMapManager.removeSplatterMap(frame, player);
+            PosterMap poster = SplatterPosterManager.removeSplatterPoster(frame, player);
             if (poster != null) {
                 event.setCancelled(true);
 
                 if (player.getGameMode() != GameMode.CREATIVE
-                        || !SplatterMapManager.hasSplatterMap(player, poster)) {
+                        || !SplatterPosterManager.hasSplatterPoster(player, poster)) {
                     poster.give(player);
                 }
                 return;
@@ -302,12 +305,12 @@ public class MapItemManager implements Listener {
 
         }
 
-        if (!MapManager.managesMap(frame.getItem())) {
+        if (!PosterManager.managesPoster(frame.getItem())) {
             return;
         }
-        SplatterMapManager.removePropertiesFromFrames(player, frame);
+        SplatterPosterManager.removePropertiesFromFrames(player, frame);
         frame.setItem(new ItemStackBuilder(item)
-                .title(getMapTitle(item))
+                .title(getPosterTitle(item))
                 .hideAllAttributes()
                 .item());
 

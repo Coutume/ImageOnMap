@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -37,7 +37,7 @@
 package fr.moribus.imageonmap.image;
 
 import fr.moribus.imageonmap.ImageOnMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.events.FutureEventHandler;
 import fr.zcraft.quartzlib.components.events.FutureEvents;
 import fr.zcraft.quartzlib.components.events.WrappedEvent;
@@ -66,45 +66,46 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapView;
 
-public class MapInitEvent implements Listener {
+public class PosterInitEvent implements Listener {
 
     public static void init() {
 
-        QuartzLib.registerEvents(new MapInitEvent());
+        QuartzLib.registerEvents(new PosterInitEvent());
         FutureEvents.registerFutureEvents(new EntitiesLoadListener());
 
         for (World world : Bukkit.getWorlds()) {
             for (ItemFrame frame : world.getEntitiesByClass(ItemFrame.class)) {
-                initMap(frame.getItem());
+                initPoster(frame.getItem());
             }
         }
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            initMap(player.getInventory().getItemInMainHand());
+            initPoster(player.getInventory().getItemInMainHand());
         }
     }
 
-    public static void initMap(ItemStack item) {
+    public static void initPoster(ItemStack item) {
         if (item != null && item.getType() == Material.FILLED_MAP) {
-            initMap(MapManager.getMapIdFromItemStack(item));
+            initPoster(PosterManager.getPosterIDFromItemStack(item));
         }
     }
 
-    public static void initMap(int id) {
-        initMap(Bukkit.getServer().getMap(id));
+    @Deprecated
+    public static void initPoster(int id) {
+        initPoster(Bukkit.getServer().getMap(id));
     }
 
-    public static void initMap(MapView map) {
-        if (map == null) {
+    public static void initPoster(MapView view) {
+        if (view == null) {
             return;
         }
-        if (Renderer.isHandled(map)) {
+        if (Renderer.isHandled(view)) {
             return;
         }
 
-        File imageFile = ImageOnMap.getPlugin().getImageFile(map.getId());
+        File imageFile = ImageOnMap.getPlugin().getImageFile(view.getId());
         if (imageFile.isFile()) {
-            ImageIOExecutor.loadImage(imageFile, Renderer.installRenderer(map));
+            ImageIOExecutor.loadImage(imageFile, Renderer.installRenderer(view));
         }
     }
 
@@ -113,7 +114,7 @@ public class MapInitEvent implements Listener {
         RunTask.later(() -> {
             for (Entity entity : event.getChunk().getEntities()) {
                 if (entity instanceof ItemFrame) {
-                    initMap(((ItemFrame) entity).getItem());
+                    initPoster(((ItemFrame) entity).getItem());
                 }
             }
         }, 5L);
@@ -122,7 +123,7 @@ public class MapInitEvent implements Listener {
     @EventHandler
     public void onPlayerInv(PlayerItemHeldEvent event) {
         ItemStack item = event.getPlayer().getInventory().getItem(event.getNewSlot());
-        initMap(item);
+        initPoster(item);
     }
 
     @EventHandler
@@ -130,7 +131,7 @@ public class MapInitEvent implements Listener {
         if (!(event.getEntity() instanceof HumanEntity)) {
             return;
         }
-        initMap(event.getItem().getItemStack());
+        initPoster(event.getItem().getItemStack());
     }
 
     @EventHandler
@@ -140,7 +141,7 @@ public class MapInitEvent implements Listener {
             case PLACE_ONE:
             case PLACE_SOME:
             case SWAP_WITH_CURSOR:
-                initMap(event.getCursor());
+                initPoster(event.getCursor());
                 break;
             default:
 
@@ -149,7 +150,7 @@ public class MapInitEvent implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent event) {
-        //Negate entity interaction with item frame containing IoM maps.
+        //Negate entity interaction with item frame containing IoM posters.
 
         Entity entity = event.getEntity();
         if (!(entity instanceof ItemFrame)) {
@@ -157,13 +158,13 @@ public class MapInitEvent implements Listener {
         }
         Entity damager = event.getDamager();
         if (damager instanceof Player) {
-            //can solve the dup with the map here by doing a better handling
+            //can solve the dup with the poster here by doing a better handling
             return;
         }
         ItemStack item = ((ItemFrame) entity).getItem();
         if (item.getType() == Material.FILLED_MAP) {
-            //if the map exist we canceled the event
-            if (MapManager.getMap(item) != null) {
+            //if the poster exist we canceled the event
+            if (PosterManager.getPoster(item) != null) {
                 event.setCancelled(true);
             }
         }
@@ -171,7 +172,7 @@ public class MapInitEvent implements Listener {
 
     @EventHandler
     public void onEntityDamageByBlockEvent(EntityDamageByBlockEvent event) {
-        //Negate damage done to IoM maps by some blocks
+        //Negate damage done to IoM posters by some blocks
 
         Entity entity = event.getEntity();
         if (!(entity instanceof ItemFrame)) {
@@ -179,8 +180,8 @@ public class MapInitEvent implements Listener {
         }
         ItemStack item = ((ItemFrame) entity).getItem();
         if (item.getType() == Material.FILLED_MAP) {
-            //if the map exist we canceled the event
-            if (MapManager.getMap(item) != null) {
+            //if the poster exist we canceled the event
+            if (PosterManager.getPoster(item) != null) {
                 switch (event.getCause()) {
                     case MAGIC:
                     case ENTITY_EXPLOSION:
@@ -209,8 +210,8 @@ public class MapInitEvent implements Listener {
 
         ItemStack item = ((ItemFrame) entity).getItem();
         if (item.getType() == Material.FILLED_MAP) {
-            //if the map exist we canceled the event
-            if (MapManager.getMap(item) != null) {
+            //if the poster exist we canceled the event
+            if (PosterManager.getPoster(item) != null) {
                 if (event.getCause() == HangingBreakEvent.RemoveCause.EXPLOSION) {
                     //creeper goes boom
                     event.setCancelled(true);
@@ -224,13 +225,13 @@ public class MapInitEvent implements Listener {
         @FutureEventHandler(event = "world.EntitiesLoadEvent")
         public void onEntitiesLoad(WrappedEvent event) {
             //New in 1.17
-            //Used to make sure map are really loaded in 1.17 on Paper (else some won't render or update properly)
+            //Used to make sure poster are really loaded in 1.17 on Paper (else some won't render or update properly)
             RunTask.later(() -> {
                 try {
                     List<Entity> entities = (List) Reflection.call(event.getEvent(), "getEntities");
                     for (Entity entity : entities) {
                         if (entity instanceof ItemFrame) {
-                            initMap(((ItemFrame) entity).getItem());
+                            initPoster(((ItemFrame) entity).getItem());
                         }
                     }
                 } catch (Exception e) {

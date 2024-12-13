@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -50,9 +50,9 @@ public enum Permissions {
     GET("imageonmap.get"),
     GETOTHER("imageonmap.getother"),
     RENAME("imageonmap.rename"),
-    PLACE_SPLATTER_MAP("imageonmap.placesplattermap"),
-    PLACE_INVISIBLE_SPLATTER_MAP("imageonmap.placeinvisiblesplattermap"),
-    REMOVE_SPLATTER_MAP("imageonmap.removesplattermap"),
+    PLACE_SPLATTER_POSTER("imageonmap.placesplattermap"),
+    PLACE_INVISIBLE_SPLATTER_POSTER("imageonmap.placeinvisiblesplattermap"),
+    REMOVE_SPLATTER_POSTER("imageonmap.removesplattermap"),
     DELETE("imageonmap.delete"),
     DELETEOTHER("imageonmap.deleteother"),
     UPDATE("imageonmap.update"),
@@ -60,11 +60,11 @@ public enum Permissions {
     ADMINISTRATIVE("imageonmap.administrative"),
     BYPASS_SIZE("imageonmap.bypasssize"),
     BYPASS_IMAGE_LIMIT("imageonmap.bypassimagelimit"),
-    BYPASS_MAP_LIMIT("imageonmap.bypassmaplimit"),
+    BYPASS_POSTER_LIMIT("imageonmap.bypassmaplimit"),
     GIVE("imageonmap.give"),
     BYPASS_WHITELIST("imageonmap.bypasswhitelist"),
     REMOTE_PLACING("imageonmap.remoteplacing"),
-    REPAIR_MAP("imageonmap.repairmap");
+    REPAIR_POSTER("imageonmap.repairmap");
 
     private final String permission;
     private final String[] aliases;
@@ -125,7 +125,7 @@ public enum Permissions {
     }
 
     public enum LimitType {
-        map,
+        poster,
         image
     }
 }

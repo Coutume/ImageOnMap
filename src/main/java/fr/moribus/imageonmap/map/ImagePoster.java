@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -37,7 +37,7 @@
 package fr.moribus.imageonmap.map;
 
 import fr.moribus.imageonmap.ImageOnMap;
-import fr.moribus.imageonmap.ui.MapItemManager;
+import fr.moribus.imageonmap.ui.PosterItemManager;
 import fr.zcraft.quartzlib.components.i18n.I;
 import java.io.File;
 import java.util.HashMap;
@@ -51,23 +51,23 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-public abstract class ImageMap implements ConfigurationSerializable {
+public abstract class ImagePoster implements ConfigurationSerializable {
     public static final int WIDTH = 128;
     public static final int HEIGHT = 128;
     /// The default display name of a map
     public static final String DEFAULT_NAME = I.t("Map");
     private final UUID userUUID;
-    private final Type mapType;
+    private final Type posterType;
     private String id;
     private String name;
 
-    protected ImageMap(UUID userUUID, Type mapType) {
-        this(userUUID, mapType, null, null);
+    protected ImagePoster(UUID userUUID, Type posterType) {
+        this(userUUID, posterType, null, null);
     }
 
-    protected ImageMap(UUID userUUID, Type mapType, String id, String name) {
+    protected ImagePoster(UUID userUUID, Type posterType, String id, String name) {
         this.userUUID = userUUID;
-        this.mapType = mapType;
+        this.posterType = posterType;
         this.id = id;
         this.name = name;
 
@@ -75,30 +75,32 @@ public abstract class ImageMap implements ConfigurationSerializable {
             if (this.name == null) {
                 this.name = DEFAULT_NAME;
             }
-            this.id = MapManager.getNextAvailableMapID(this.name, userUUID);
+            this.id = PosterManager.getNextAvailablePosterID(this.name, userUUID);
         }
     }
 
-    protected ImageMap(Map<String, Object> map, UUID userUUID, Type mapType) throws InvalidConfigurationException {
-        this(userUUID, mapType,
+    protected ImagePoster(Map<String, Object> map, UUID userUUID, Type posterType)
+            throws InvalidConfigurationException {
+        this(userUUID, posterType,
                 (String) getNullableFieldValue(map, "id"),
                 (String) getNullableFieldValue(map, "name"));
 
     }
 
-    public static File getFullImageFile(int mapIDstart, int mapIDend) {
-        return new File(ImageOnMap.getPlugin().getImagesDirectory(), "_" + mapIDstart + "-" + mapIDend + ".png");
+    public static File getFullImageFile(int posterIDstart, int posterIDend) {
+        return new File(ImageOnMap.getPlugin().getImagesDirectory(), "_" + posterIDstart
+                + "-" + posterIDend + ".png");
     }
 
-    public static ImageMap fromConfig(Map<String, Object> map, UUID userUUID) throws InvalidConfigurationException {
-        Type mapType;//TODO refactor this
+    public static ImagePoster fromConfig(Map<String, Object> map, UUID userUUID) throws InvalidConfigurationException {
+        Type posterType;//TODO refactor this
         try {
-            mapType = Type.valueOf((String) map.get("type"));
+            posterType = Type.valueOf((String) map.get("type"));
         } catch (ClassCastException ex) {
             throw new InvalidConfigurationException(ex);
         }
 
-        switch (mapType) {
+        switch (posterType) {
             case SINGLE:
             case POSTER:
                 return new PosterMap(map, userUUID);
@@ -110,7 +112,8 @@ public abstract class ImageMap implements ConfigurationSerializable {
     public static Integer[] getSize(UUID playerUUID, String id) {
 
         ConfigurationSection section =
-                MapManager.getPlayerMapStore(playerUUID).getToolConfig().getConfigurationSection("PlayerMapStore");
+                PosterManager.getplayerPosterStore(playerUUID).getToolConfig()
+                        .getConfigurationSection("playerPosterStore");
 
         if (section == null) {
             return new Integer[0];
@@ -146,36 +149,36 @@ public abstract class ImageMap implements ConfigurationSerializable {
         }
     }
 
-    public abstract int[] getMapsIDs();
+    public abstract int[] getPostersIDs();
 
-    public abstract int getFirstMapID();
+    public abstract int getFirstPosterID();
     /* ====== Serialization methods ====== */
 
-    public abstract boolean managesMap(int mapID);
+    public abstract boolean managesPoster(int posterID);
 
-    public boolean managesMap(ItemStack item) {
+    public boolean managesPoster(ItemStack item) {
         if (item == null) {
             return false;
         }
         if (item.getType() != Material.FILLED_MAP) {
             return false;
         }
-        return managesMap(MapManager.getMapIdFromItemStack(item));
+        return managesPoster(PosterManager.getPosterIDFromItemStack(item));
     }
 
     //
-    public abstract int getMapCount();
+    public abstract int getPosterCount();
 
     //
 
     public boolean give(Player player) {
-        return MapItemManager.give(player, this);
+        return PosterItemManager.give(player, this);
     }
 
     public boolean give(Player player, int quantity) {
         boolean bool = true;
         for (int i = 0; i < quantity; i++) {
-            bool = bool && MapItemManager.give(player, this);
+            bool = bool && PosterItemManager.give(player, this);
         }
         return bool;
     }
@@ -186,7 +189,7 @@ public abstract class ImageMap implements ConfigurationSerializable {
     public Map<String, Object> serialize() {
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("id", getId());
-        map.put("type", mapType.toString());
+        map.put("type", posterType.toString());
         map.put("name", getName());
         this.postSerialize(map);
         return map;
@@ -208,7 +211,7 @@ public abstract class ImageMap implements ConfigurationSerializable {
     }
 
     public synchronized Type getType() {
-        return mapType;
+        return posterType;
     }
 
     public synchronized void rename(String id, String name) {
@@ -220,7 +223,7 @@ public abstract class ImageMap implements ConfigurationSerializable {
         if (getName().equals(name)) {
             return;
         }
-        rename(MapManager.getNextAvailableMapID(name, getUserUUID()), name);
+        rename(PosterManager.getNextAvailablePosterID(name, getUserUUID()), name);
     }
 
     public enum Type {

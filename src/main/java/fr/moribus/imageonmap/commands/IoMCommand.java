@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -37,8 +37,8 @@
 package fr.moribus.imageonmap.commands;
 
 import fr.moribus.imageonmap.PluginConfiguration;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.commands.Command;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.i18n.I;
@@ -147,16 +147,16 @@ public abstract class IoMCommand extends Command {
     }
 
 
-    protected List<String> getMatchingMapNames(Player player, String prefix) {
-        return getMatchingMapNames(MapManager.getMapList(player.getUniqueId()), prefix);
+    protected List<String> getMatchingPosterNames(Player player, String prefix) {
+        return getMatchingPosterNames(PosterManager.getPosterList(player.getUniqueId()), prefix);
     }
 
-    protected List<String> getMatchingMapNames(Iterable<? extends ImageMap> maps, String prefix) {
+    protected List<String> getMatchingPosterNames(Iterable<? extends ImagePoster> posters, String prefix) {
         List<String> matches = new ArrayList<>();
 
-        for (ImageMap map : maps) {
-            if (map.getId().startsWith(prefix)) {
-                matches.add(map.getId());
+        for (ImagePoster poster : posters) {
+            if (poster.getId().startsWith(prefix)) {
+                matches.add(poster.getId());
             }
         }
 

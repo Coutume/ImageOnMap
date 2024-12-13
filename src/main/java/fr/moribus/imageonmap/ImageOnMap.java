@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -49,9 +49,9 @@ import fr.moribus.imageonmap.commands.maptool.RenameCommand;
 import fr.moribus.imageonmap.commands.maptool.UpdateCommand;
 import fr.moribus.imageonmap.image.ImageIOExecutor;
 import fr.moribus.imageonmap.image.ImageRendererExecutor;
-import fr.moribus.imageonmap.image.MapInitEvent;
-import fr.moribus.imageonmap.map.MapManager;
-import fr.moribus.imageonmap.ui.MapItemManager;
+import fr.moribus.imageonmap.image.PosterInitEvent;
+import fr.moribus.imageonmap.map.PosterManager;
+import fr.moribus.imageonmap.ui.PosterItemManager;
 import fr.zcraft.quartzlib.components.commands.CommandWorkers;
 import fr.zcraft.quartzlib.components.commands.Commands;
 import fr.zcraft.quartzlib.components.gui.Gui;
@@ -91,20 +91,21 @@ import org.bstats.bukkit.Metrics;
 // soit avec un item map vide+ un item de peintre ? soit avec un atelier?
 // soit avec certains objets simple dans inventaire
 public final class ImageOnMap extends QuartzPlugin {
+
     private static final String IMAGES_DIRECTORY_NAME = "images";
     private static final String RENDERS_DIRECTORY_NAME = "renders";
-    private static final String MAPS_DIRECTORY_NAME = "maps";
+    private static final String POSTERS_DIRECTORY_NAME = "maps";
     private static ImageOnMap plugin;
     private File imagesDirectory;
 
     private File rendersDirectory;
-    private File mapsDirectory;
+    private File postersDirectory;
     private CommandWorkers commandWorker;
 
     public ImageOnMap() {
         imagesDirectory = new File(this.getDataFolder(), IMAGES_DIRECTORY_NAME);
         rendersDirectory = new File(this.getDataFolder(), RENDERS_DIRECTORY_NAME);
-        mapsDirectory = new File(this.getDataFolder(), MAPS_DIRECTORY_NAME);
+        postersDirectory = new File(this.getDataFolder(), POSTERS_DIRECTORY_NAME);
         plugin = this;
     }
 
@@ -120,16 +121,16 @@ public final class ImageOnMap extends QuartzPlugin {
         return rendersDirectory;
     }
 
-    public File getMapsDirectory() {
-        return mapsDirectory;
+    public File getPostersDirectory() {
+        return postersDirectory;
     }
 
-    public File getImageFile(int mapID) {
-        return new File(imagesDirectory, "map" + mapID + ".png");
+    public File getImageFile(int posterID) {
+        return new File(imagesDirectory, "map" + posterID + ".png");
     }
 
-    public File getRenderFile(int mapID) {
-        return new File(rendersDirectory, "render" + mapID + ".png");
+    public File getRenderFile(int posterID) {
+        return new File(rendersDirectory, "render" + posterID + ".png");
     }
 
     public CommandWorkers getCommandWorker() {
@@ -138,7 +139,7 @@ public final class ImageOnMap extends QuartzPlugin {
 
     private Map<String, File> checkDirs() throws IOException {
         Map<String, File> dirs = new HashMap<>();
-        dirs.put("mapsDirectory", checkPluginDirectory(mapsDirectory));
+        dirs.put("mapsDirectory", checkPluginDirectory(postersDirectory));
         dirs.put("rendersDirectory", checkPluginDirectory(rendersDirectory));
         dirs.put("imagesDirectory", checkPluginDirectory(imagesDirectory));
         return dirs;
@@ -149,7 +150,7 @@ public final class ImageOnMap extends QuartzPlugin {
         // Creating the images and maps directories if necessary
         try {
             Map<String, File> directories = checkDirs();
-            mapsDirectory = directories.get("mapsDirectory");
+            postersDirectory = directories.get("mapsDirectory");
             rendersDirectory = directories.get("rendersDirectory");
             imagesDirectory = directories.get("imagesDirectory");
         } catch (final IOException ex) {
@@ -168,9 +169,9 @@ public final class ImageOnMap extends QuartzPlugin {
         //Init all the things !
         I18n.setPrimaryLocale(PluginConfiguration.LANG.get());
 
-        MapManager.init();
-        MapInitEvent.init();
-        MapItemManager.init();
+        PosterManager.init();
+        PosterInitEvent.init();
+        PosterItemManager.init();
 
         String commandGroupName = "maptool";
         Commands.register(
@@ -199,8 +200,8 @@ public final class ImageOnMap extends QuartzPlugin {
 
         if (PluginConfiguration.COLLECT_DATA.get()) {
             final Metrics metrics = new Metrics(this, 5920);
-            metrics.addCustomChart(new Metrics.SingleLineChart("rendered-images", MapManager::getImagesCount));
-            metrics.addCustomChart(new Metrics.SingleLineChart("used-minecraft-maps", MapManager::getMapCount));
+            metrics.addCustomChart(new Metrics.SingleLineChart("rendered-images", PosterManager::getImagesCount));
+            metrics.addCustomChart(new Metrics.SingleLineChart("used-minecraft-maps", PosterManager::getPosterCount));
         } else {
             PluginLogger.warning("Collect data disabled");
         }
@@ -208,8 +209,8 @@ public final class ImageOnMap extends QuartzPlugin {
 
     @Override
     public void onDisable() {
-        MapManager.exit();
-        MapItemManager.exit();
+        PosterManager.exit();
+        PosterItemManager.exit();
         //MigratorExecutor.waitForMigration();//Removed for now doesn't work nor is useful, maybe useful later on
 
         super.onDisable();

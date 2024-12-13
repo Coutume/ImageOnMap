@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -39,7 +39,7 @@ package fr.moribus.imageonmap.commands.maptool;
 
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.gui.MapListGui;
+import fr.moribus.imageonmap.gui.PosterListGui;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.gui.Gui;
@@ -75,7 +75,7 @@ public class ExploreCommand extends IoMCommand {
 
         OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
         if (sender.isOnline()) {
-            Gui.open(sender, new MapListGui(offlinePlayer, playerName));
+            Gui.open(sender, new PosterListGui(offlinePlayer, playerName));
         }
 
     }

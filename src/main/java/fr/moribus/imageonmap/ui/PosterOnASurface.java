@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,9 +36,8 @@
 
 package fr.moribus.imageonmap.ui;
 
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
-import fr.zcraft.quartzlib.tools.PluginLogger;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.tools.world.FlatLocation;
 import fr.zcraft.quartzlib.tools.world.WorldUtils;
 import java.util.HashMap;
@@ -168,13 +167,10 @@ public class PosterOnASurface {
 
         ItemFrame selectedFrame = getFrameAt(selectedLocation, facing);
 
-        int x = 0;
-        int z = 0;
         for (int r = 0; r < rows; r++) {
+            int x = 0;
+            int z = 0;
             for (int c = 0; c < columns; c++) {
-                PluginLogger.info("column " + c);
-                PluginLogger.info("row " + r);
-
                 if (test(selectedFrame, loc, facing)) {
                     itemFramesLocationMap.put(loc.clone(), getFrameAt(loc, facing));
                 }
@@ -251,19 +247,16 @@ public class PosterOnASurface {
 
     //TODO add descr and move to correct class and rename
     private static boolean test(ItemFrame selectedFrame, Location loc, BlockFace facing) {
-        ImageMap firstMap = MapManager.getMap(selectedFrame.getItem());
-        MapManager.getMap(getFrameAt(loc, facing).getItem());
+        ImagePoster fullPoster = PosterManager.getPoster(selectedFrame.getItem());
 
-        for (int id : firstMap.getMapsIDs()) {
-            if (id == MapManager.getMapIdFromItemStack(getFrameAt(loc, facing).getItem())) {
+        for (int id : fullPoster.getPostersIDs()) {
+            if (getFrameAt(loc, facing) == null) {
+                continue;
+            }
+            if (id == PosterManager.getPosterIDFromItemStack(getFrameAt(loc, facing).getItem())) {
                 return true;
             }
-            //TODO refactor with lambda
         }
         return false;
-    }
-
-    public void expand() {
-
     }
 }

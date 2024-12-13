@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -39,11 +39,11 @@ package fr.moribus.imageonmap.map;
 import fr.zcraft.quartzlib.components.i18n.I;
 import java.text.MessageFormat;
 
-public class MapManagerException extends Exception {
+public class PosterManagerException extends Exception {
     private final Reason reason;
 
 
-    public MapManagerException(Reason reason, Object... arguments) {
+    public PosterManagerException(Reason reason, Object... arguments) {
         super(reason.getReasonString(arguments));
         this.reason = reason;
     }
@@ -53,9 +53,9 @@ public class MapManagerException extends Exception {
     }
     
     public enum Reason {
-        MAXIMUM_PLAYER_MAPS_EXCEEDED(I.t("You have too many maps (maximum : {0}).")),
-        MAXIMUM_SERVER_MAPS_EXCEEDED(I.t("The server ImageOnMap limit has been reached.")),
-        IMAGEMAP_DOES_NOT_EXIST(I.t("The given map does not exist."));
+        MAXIMUM_PLAYER_POSTERS_EXCEEDED(I.t("You have too many maps (maximum : {0}).")),
+        MAXIMUM_SERVER_POSTERS_EXCEEDED(I.t("The server ImageOnMap limit has been reached.")),
+        IMAGEPOSTER_DOES_NOT_EXIST(I.t("The given map does not exist."));
 
         private final String reasonString;
 

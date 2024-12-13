@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -38,8 +38,8 @@ package fr.moribus.imageonmap.commands.maptool;
 
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.i18n.I;
@@ -60,19 +60,19 @@ public class RenameCommand extends IoMCommand {
             return;
         }
         String oldName = arguments.get(0);
-        ImageMap map = MapManager.getMap(playerSender().getUniqueId(), oldName);
-        if (map == null) {
+        ImagePoster poster = PosterManager.getPoster(playerSender().getUniqueId(), oldName);
+        if (poster == null) {
             error(I.t("This map does not exist."));
             return;
         }
         String newName = arguments.get(1);
-        map.rename(newName);
+        poster.rename(newName);
     }
 
     @Override
     protected List<String> complete() throws CommandException {
         if (args.length == 1) {
-            return getMatchingMapNames(playerSender(), args[0]);
+            return getMatchingPosterNames(playerSender(), args[0]);
         }
         return null;
     }

@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -38,8 +38,8 @@ package fr.moribus.imageonmap.commands.maptool;
 
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
@@ -92,8 +92,8 @@ public class ListCommand extends IoMCommand {
             playerSender = null;
         }
         UUID uuid = getPlayerUUID(playerName);
-        List<ImageMap> mapList = MapManager.getMapList(uuid);
-        if (mapList.isEmpty()) {
+        List<ImagePoster> posterList = PosterManager.getPosterList(uuid);
+        if (posterList.isEmpty()) {
             String msg = I.t("No map found.");
             if (isHuman) {
                 info(playerSender, msg);
@@ -104,7 +104,7 @@ public class ListCommand extends IoMCommand {
         }
         String msg = I.tn("{white}{bold}{0} map found.",
                 "{white}{bold}{0} maps found.",
-                mapList.size());
+                posterList.size());
         if (isHuman) {
             info(playerSender,
                     msg); //TODO merge those into a common info(isHuman,msg) that print to a sender or the console
@@ -113,12 +113,12 @@ public class ListCommand extends IoMCommand {
         }
 
         RawTextPart rawText = new RawText("");
-        rawText = addMap(rawText, mapList.get(0));
+        rawText = addPoster(rawText, posterList.get(0));
 
         //TODO pagination chat
-        for (int i = 1, c = mapList.size(); i < c; i++) {
+        for (int i = 1, c = posterList.size(); i < c; i++) {
             rawText = rawText.then(", ").color(ChatColor.GRAY);
-            rawText = addMap(rawText, mapList.get(i));
+            rawText = addPoster(rawText, posterList.get(i));
         }
         if (isHuman) {
             RawMessage.send(playerSender, rawText.build());
@@ -129,17 +129,17 @@ public class ListCommand extends IoMCommand {
 
     }
 
-    private RawTextPart<?> addMap(RawTextPart<?> rawText, ImageMap map) {
-        final String size = map.getType() == ImageMap.Type.SINGLE ? "1 × 1" :
-                ((PosterMap) map).getColumnCount() + " × " + ((PosterMap) map).getRowCount();
+    private RawTextPart<?> addPoster(RawTextPart<?> rawText, ImagePoster poster) {
+        final String size = poster.getType() == ImagePoster.Type.SINGLE ? "1 × 1" :
+                ((PosterMap) poster).getColumnCount() + " × " + ((PosterMap) poster).getRowCount();
 
         return rawText
-                .then(map.getId())
+                .then(poster.getId())
                 .color(ChatColor.WHITE)
-                .command(GetCommand.class, map.getId())
+                .command(GetCommand.class, poster.getId())
                 .hover(new RawText()
-                        .then(map.getName()).style(ChatColor.BOLD, ChatColor.GREEN).then("\n")
-                        .then(map.getId() + ", " + size).color(ChatColor.GRAY).then("\n\n")
+                        .then(poster.getName()).style(ChatColor.BOLD, ChatColor.GREEN).then("\n")
+                        .then(poster.getId() + ", " + size).color(ChatColor.GRAY).then("\n\n")
                         .then(I.t("{white}Click{gray} to get this map"))
                 );
     }

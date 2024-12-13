@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -40,8 +40,8 @@ import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
 import fr.moribus.imageonmap.image.ImageRendererExecutor;
 import fr.moribus.imageonmap.image.ImageUtils;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.i18n.I;
@@ -70,7 +70,7 @@ public class UpdateCommand extends IoMCommand {
             return;
         }
         final String playerName;
-        final String mapName;
+        final String posterName;
         final String url;
         final String resize;
         final Player playerSender;
@@ -95,7 +95,7 @@ public class UpdateCommand extends IoMCommand {
         if (arguments.size() == 2) {
             resize = "";
             playerName = playerSender.getName();
-            mapName = arguments.get(0);
+            posterName = arguments.get(0);
             url = arguments.get(1);
         } else {
             if (arguments.size() == 4) {
@@ -104,14 +104,14 @@ public class UpdateCommand extends IoMCommand {
                     return;
                 }
                 playerName = arguments.get(0);
-                mapName = arguments.get(1);
+                posterName = arguments.get(1);
                 url = arguments.get(2);
                 resize = arguments.get(3);
             } else {
                 if (arguments.size() == 3) {
                     if (arguments.get(2).equals("covered") || arguments.get(2).equals("stretched")) {
                         playerName = playerSender.getName();
-                        mapName = arguments.get(0);
+                        posterName = arguments.get(0);
                         url = arguments.get(1);
                         resize = arguments.get(2);
                     } else {
@@ -120,7 +120,7 @@ public class UpdateCommand extends IoMCommand {
                             return;
                         }
                         playerName = arguments.get(0);
-                        mapName = arguments.get(1);
+                        posterName = arguments.get(1);
                         url = arguments.get(2);
                         resize = "";
                     }
@@ -128,7 +128,7 @@ public class UpdateCommand extends IoMCommand {
                     resize = "";
                     playerName = "";
                     url = "";
-                    mapName = "";
+                    posterName = "";
                 }
             }
         }
@@ -137,9 +137,9 @@ public class UpdateCommand extends IoMCommand {
         // because I went from 3 to 4 by adding the none as default instead of the contained one.
 
         UUID uuid = getPlayerUUID(playerName);
-        ImageMap map = MapManager.getMap(uuid, mapName);
+        ImagePoster poster = PosterManager.getPoster(uuid, posterName);
 
-        if (map == null) {
+        if (poster == null) {
             warning(sender, I.t("This map does not exist."));
             return;
         }
@@ -154,11 +154,11 @@ public class UpdateCommand extends IoMCommand {
             }
 
             //TODO replace by a check of the load status.(if not loaded load the mapmanager)
-            MapManager.load(false);//we don't want to spam the console each time we reload the mapManager
+            PosterManager.load(false);//we don't want to spam the console each time we reload the mapManager
 
             Integer[] size = {1, 1};
-            if (map.getType() == ImageMap.Type.POSTER) {
-                size = map.getSize(map.getUserUUID(), map.getId());
+            if (poster.getType() == ImagePoster.Type.POSTER) {
+                size = poster.getSize(poster.getUserUUID(), poster.getId());
             }
 
             if (size.length == 0) {
@@ -175,9 +175,9 @@ public class UpdateCommand extends IoMCommand {
                     PluginLogger.info(msg);
                 }
                 ImageRendererExecutor
-                        .update(url1, scaling, uuid, map, width, height, new WorkerCallback<ImageMap>() {
+                        .update(url1, scaling, uuid, poster, width, height, new WorkerCallback<ImagePoster>() {
                             @Override
-                            public void finished(ImageMap result) {
+                            public void finished(ImagePoster result) {
                                 String msg = I.t("The map was updated using the new image!");
                                 if (playerSender != null) {
                                     //TODO tester si player humain

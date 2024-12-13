@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -48,20 +48,20 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 
-public class PosterMap extends ImageMap {
-    protected final int[] mapsIDs;
+public class PosterMap extends ImagePoster {
+    protected final int[] postersIDs;
     protected final int columnCount;
     protected final int rowCount;
 
-    public PosterMap(UUID userUUID, int[] mapsIDs, String id, String name, int columnCount, int rowCount) {
+    public PosterMap(UUID userUUID, int[] postersIDs, String id, String name, int columnCount, int rowCount) {
         super(userUUID, Type.POSTER, id, name);
-        this.mapsIDs = mapsIDs;
+        this.postersIDs = postersIDs;
         this.columnCount = Math.max(columnCount, 0);
         this.rowCount = Math.max(rowCount, 0);
     }
 
-    public PosterMap(UUID userUUID, int[] mapsIDs, int columnCount, int rowCount) {
-        this(userUUID, mapsIDs, null, null, columnCount, rowCount);
+    public PosterMap(UUID userUUID, int[] postersIDs, int columnCount, int rowCount) {
+        this(userUUID, postersIDs, null, null, columnCount, rowCount);
     }
 
     public PosterMap(Map<String, Object> map, UUID userUUID) throws InvalidConfigurationException {
@@ -70,22 +70,22 @@ public class PosterMap extends ImageMap {
         columnCount = getFieldValue(map, "columns");
         rowCount = getFieldValue(map, "rows");
 
-        List<Integer> idList = getFieldValue(map, "mapsIDs");
-        mapsIDs = new int[idList.size()];
+        List<Integer> idList = getFieldValue(map, "postersIDs");
+        postersIDs = new int[idList.size()];
         for (int i = 0, c = idList.size(); i < c; i++) {
-            mapsIDs[i] = idList.get(i);
+            postersIDs[i] = idList.get(i);
         }
     }
 
     @Override
-    public int[] getMapsIDs() {
-        return mapsIDs;
+    public int[] getPostersIDs() {
+        return postersIDs;
     }
 
     @Override
-    public int getFirstMapID() {
+    public int getFirstPosterID() {
         int first = -1;
-        for (int id : mapsIDs) {
+        for (int id : postersIDs) {
             if (first == -1 || first > id) {
                 first = id;
             }
@@ -95,9 +95,9 @@ public class PosterMap extends ImageMap {
     /* ====== Serialization methods ====== */
 
     @Override
-    public boolean managesMap(int mapID) {
-        for (int mapsID : mapsIDs) {
-            if (mapsID == mapID) {
+    public boolean managesPoster(int posterID) {
+        for (int postersID : postersIDs) {
+            if (posterID == postersID) {
                 return true;
             }
         }
@@ -109,7 +109,7 @@ public class PosterMap extends ImageMap {
     protected void postSerialize(Map<String, Object> map) {
         map.put("columns", columnCount);
         map.put("rows", rowCount);
-        map.put("mapsIDs", mapsIDs);
+        map.put("postersIDs", postersIDs);
     }
 
     /* ====== Getters & Setters ====== */
@@ -158,22 +158,22 @@ public class PosterMap extends ImageMap {
      * @return The Minecraft map ID.
      * @throws ArrayIndexOutOfBoundsException if the given coordinates are too big (out of the poster).
      */
-    public int getMapIdAt(int x, int y) {
-        return mapsIDs[y * columnCount + x];
+    public int getPosterIdAt(int x, int y) {
+        return postersIDs[y * columnCount + x];
     }
 
-    public int getMapIdAt(int index) {
-        return mapsIDs[index];
+    public int getPosterIdAt(int index) {
+        return postersIDs[index];
     }
 
-    public int getMapIdAtReverseY(int index) {
+    public int getPosterIdAtReverseY(int index) {
         int x = index % (columnCount);
         int y = index / (columnCount);
-        return getMapIdAt(x, rowCount - y - 1);
+        return getPosterIdAt(x, rowCount - y - 1);
     }
 
 
-    public int getMapIdAtReverseZ(int index, BlockFace orientation, BlockFace bf) {
+    public int getPosterIdAtReverseZ(int index, BlockFace orientation, BlockFace bf) {
         //TODO maybe a bug there why don't use orientation?
         int x = 0;
         int y = 0;
@@ -189,7 +189,7 @@ public class PosterMap extends ImageMap {
             default:
         }
 
-        return getMapIdAt(x, rowCount - y - 1);
+        return getPosterIdAt(x, rowCount - y - 1);
 
     }
 
@@ -199,56 +199,56 @@ public class PosterMap extends ImageMap {
     }
 
     @Override
-    public int getMapCount() {
-        return mapsIDs.length;
+    public int getPosterCount() {
+        return postersIDs.length;
     }
 
-    public int getIndex(int mapID) {
-        for (int i = 0; i < mapsIDs.length; i++) {
-            if (mapsIDs[i] == mapID) {
+    public int getIndex(int posterID) {
+        for (int i = 0; i < postersIDs.length; i++) {
+            if (postersIDs[i] == posterID) {
                 return i;
             }
         }
-        throw new IllegalArgumentException("Invalid map ID");
+        throw new IllegalArgumentException("Invalid poster ID");
     }
 
-    public int getSortedIndex(int mapID) {
-        int[] ids = mapsIDs.clone();
+    public int getSortedIndex(int posterID) {
+        int[] ids = postersIDs.clone();
         Arrays.sort(ids);
         for (int i : ids) {
             PluginLogger.info("" + i);
         }
 
-        for (int i = 0; i < mapsIDs.length; i++) {
-            if (ids[i] == mapID) {
+        for (int i = 0; i < postersIDs.length; i++) {
+            if (ids[i] == posterID) {
                 return i;
             }
         }
-        throw new IllegalArgumentException("Invalid map ID");
+        throw new IllegalArgumentException("Invalid poster ID");
     }
 
-    public MapIndexes getIndexes(int mapID) {
-        int index = getSortedIndex(mapID);
+    public PosterIndexes getIndexes(int posterID) {
+        int index = getSortedIndex(posterID);
         PluginLogger.info(rowCount + " " + columnCount + " " + index);
-        return new MapIndexes(index / columnCount, index % columnCount);
+        return new PosterIndexes(index / columnCount, index % columnCount);
     }
 
     public Location findLocationFirstFrame(ItemFrame frame, Player player) {
-        final ImageMap map = MapManager.getMap(frame.getItem());
-        if (!(map instanceof PosterMap)) {
+        final ImagePoster iposter = PosterManager.getPoster(frame.getItem());
+        if (!(iposter instanceof PosterMap)) {
             return null;
         }
-        PosterMap poster = (PosterMap) map;
+        PosterMap poster = (PosterMap) iposter;
         if (!poster.hasColumnData()) {
             return null;
         }
-        int mapID = MapManager.getMapIdFromItemStack(frame.getItem());
+        int posterID = PosterManager.getPosterIDFromItemStack(frame.getItem());
 
         BlockFace bf = WorldUtils.get4thOrientation(player.getLocation());
 
-        MapIndexes mapindexes = getIndexes(mapID);
-        int row = mapindexes.getRowIndex();
-        int column = mapindexes.getColumnIndex();
+        PosterIndexes posterindexes = getIndexes(posterID);
+        int row = posterindexes.getRowIndex();
+        int column = posterindexes.getColumnIndex();
         Location loc = frame.getLocation();
         PluginLogger.info("\n\nlocalization of the initial clicked frame " + loc);
         PluginLogger.info("row " + row + " col " + column);

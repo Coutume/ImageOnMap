@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,21 +36,22 @@
 
 package fr.moribus.imageonmap.ui;
 
+import fr.moribus.imageonmap.ImageOnMap;
 import fr.moribus.imageonmap.Permissions;
-import fr.moribus.imageonmap.image.MapInitEvent;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.image.PosterInitEvent;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.tools.PluginLogger;
-import fr.zcraft.quartzlib.tools.items.GlowEffect;
 import fr.zcraft.quartzlib.tools.items.ItemStackBuilder;
-import fr.zcraft.quartzlib.tools.runners.RunTask;
 import fr.zcraft.quartzlib.tools.text.MessageSender;
 import fr.zcraft.quartzlib.tools.world.FlatLocation;
 import fr.zcraft.quartzlib.tools.world.WorldUtils;
 import java.lang.reflect.Method;
 import java.util.Map;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -63,26 +64,27 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
+import org.bukkit.scheduler.BukkitScheduler;
 
 // TODO update when adding small picture snapshot.
-public abstract class SplatterMapManager {
-    private SplatterMapManager() {
+public abstract class SplatterPosterManager {
+    private SplatterPosterManager() {
     }
 
-    public static ItemStack makeSplatterMap(PosterMap map) {
+    public static ItemStack makeSplatterPoster(PosterMap poster) {
 
 
-        final ItemStack splatter = new ItemStackBuilder(Material.FILLED_MAP).title(ChatColor.GOLD, map.getName())
+        final ItemStack splatter = new ItemStackBuilder(Material.FILLED_MAP).title(ChatColor.GOLD, poster.getName())
                 .title(ChatColor.DARK_GRAY, " - ").title(ChatColor.GRAY, I.t("Splatter Map"))
                 .title(ChatColor.DARK_GRAY, " - ")
-                .title(ChatColor.GRAY, I.t("{0} × {1}", map.getColumnCount(), map.getRowCount()))
-                .loreLine(ChatColor.GRAY, map.getId()).loreLine()
+                .title(ChatColor.GRAY, I.t("{0} × {1}", poster.getColumnCount(), poster.getRowCount()))
+                .loreLine(ChatColor.GRAY, poster.getId()).loreLine()
                 /// Title in a splatter map tooltip
                 .loreLine(ChatColor.BLUE, I.t("Item frames needed"))
                 /// Size of a map stored in a splatter map
                 .loreLine(ChatColor.GRAY,
-                        I.t("{0} × {1} (total {2} frames)", map.getColumnCount(), map.getRowCount(),
-                                map.getColumnCount() * map.getRowCount()))
+                        I.t("{0} × {1} (total {2} frames)", poster.getColumnCount(), poster.getRowCount(),
+                                poster.getColumnCount() * poster.getRowCount()))
                 .loreLine()
                 /// Title in a splatter map tooltip
                 .loreLine(ChatColor.BLUE, I.t("How to use this?"))
@@ -99,7 +101,7 @@ public abstract class SplatterMapManager {
                 .craftItem();
 
         final MapMeta meta = (MapMeta) splatter.getItemMeta();
-        meta.setMapId(map.getMapIdAt(0));
+        meta.setMapId(poster.getPosterIdAt(0));
         meta.setColor(Color.GREEN);
         splatter.setItemMeta(meta);
 
@@ -124,8 +126,8 @@ public abstract class SplatterMapManager {
      * @return The modified item stack. The instance may be different if the passed item stack is not a craft itemstack.
      */
     public static ItemStack addSplatterAttribute(final ItemStack itemStack) {
-        GlowEffect.addGlow(itemStack);
-        //TODO find a good solution there
+        //GlowEffect.addGlow(itemStack);
+        //TODO find a good solution there without using QL
         return itemStack;
     }
 
@@ -137,22 +139,22 @@ public abstract class SplatterMapManager {
      * @return True if the attribute was detected.
      */
     public static boolean hasSplatterAttributes(ItemStack itemStack) {
-        return MapManager.managesMap(itemStack);
+        return PosterManager.managesPoster(itemStack);
     }
 
     /**
      * Return true if it has a specified splatter map
      *
      * @param player The player to check.
-     * @param map    The map to check.
+     * @param poster The map to check.
      * @return True if the player has this map
      */
-    public static boolean hasSplatterMap(Player player, PosterMap map) {
+    public static boolean hasSplatterPoster(Player player, PosterMap poster) {
         Inventory playerInventory = player.getInventory();
 
         for (int i = 0; i < playerInventory.getSize(); ++i) {
             ItemStack item = playerInventory.getItem(i);
-            if (hasSplatterAttributes(item) && map.managesMap(item)) {
+            if (hasSplatterAttributes(item) && poster.managesPoster(item)) {
                 return true;
             }
         }
@@ -168,13 +170,13 @@ public abstract class SplatterMapManager {
      * @return true if the map was correctly placed
      */
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
-    public static boolean placeSplatterMap(ItemFrame startFrame, Player player, PlayerInteractEntityEvent event) {
-        ImageMap map = MapManager.getMap(player.getInventory().getItemInMainHand());
-
-        if (!(map instanceof PosterMap)) {
+    public static boolean placeSplatterPoster(ItemFrame startFrame, Player player, PlayerInteractEntityEvent event) {
+        ImagePoster iposter = PosterManager.getPoster(player.getInventory().getItemInMainHand());
+        if (!(iposter instanceof PosterMap)) {
             return false;
         }
-        PosterMap poster = (PosterMap) map;
+
+        PosterMap poster = (PosterMap) iposter;
         PosterWall wall = new PosterWall();
 
         if (startFrame.getFacing().equals(BlockFace.DOWN) || startFrame.getFacing().equals(BlockFace.UP)) {
@@ -223,8 +225,8 @@ public abstract class SplatterMapManager {
             for (ItemFrame frame : surface.frames) {
 
                 bf = WorldUtils.get4thOrientation(player.getLocation());
-                int id = poster.getMapIdAtReverseZ(i, bf, startFrame.getFacing());
-                setupMap(player, frame, id);
+                int id = poster.getPosterIdAtReverseZ(i, bf, startFrame.getFacing());
+                PluginLogger.info("toto");
                 switch (frame.getFacing()) {
                     case UP:
                         break;
@@ -254,7 +256,7 @@ public abstract class SplatterMapManager {
                     }
                 }*/
 
-                MapInitEvent.initMap(id);
+                PosterInitEvent.initPoster(id);
                 i++;
             }
         } else {
@@ -262,40 +264,54 @@ public abstract class SplatterMapManager {
             FlatLocation startLocation = new FlatLocation(startFrame.getLocation(), startFrame.getFacing());
             FlatLocation endLocation = startLocation.clone().add(poster.getColumnCount(), poster.getRowCount());
 
+            PluginLogger.info(startLocation.toString());
+            PluginLogger.info(endLocation.toString());
+
             wall.loc1 = startLocation;
             wall.loc2 = endLocation;
 
             if (!wall.isValid()) {
-                MessageSender.sendActionBarMessage(player,
-                        I.t("{ce}There is not enough space to place this map ({0} × {1}).", poster.getColumnCount(),
-                                poster.getRowCount()));
+
+                String message =
+                        I.t("§c There is not enough space to place this map ({0} × {1}).", poster.getColumnCount(),
+                                poster.getRowCount());
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
                 return false;
             }
 
             int i = 0;
             for (ItemFrame frame : wall.frames) {
 
-                int id = poster.getMapIdAtReverseY(i);
+                int id = poster.getPosterIdAtReverseY(i);
 
 
-                setupMap(player, frame, id);
+                setupPoster(player, frame, id);
 
 
                 //Force reset of rotation
                 frame.setRotation(Rotation.NONE);
-                MapInitEvent.initMap(id);
+                PosterInitEvent.initPoster(id);
                 ++i;
             }
         }
         return true;
     }
 
-    private static void setupMap(Player player, ItemFrame frame, int id) {
-        RunTask.later(() -> {
-            addPropertiesToFrames(player, frame);
-            ItemStack item = MapItemManager.createMapItem(id, "", true, false);
-            frame.setItem(item);
+    private static void setupPoster(Player player, ItemFrame frame, int id) {
+        BukkitScheduler scheduler = ImageOnMap.getPlugin().getServer().getScheduler();
+        scheduler.scheduleSyncDelayedTask(ImageOnMap.getPlugin(), new Runnable() {
+            @Override
+            public void run() {
+                addPropertiesToFrames(player, frame);
+                ItemStack item = PosterItemManager.createPosterItem(id, "", true, false);
+                frame.setItem(item);
+            }
         }, 5L);
+        /*RunTask.later(() -> {
+            addPropertiesToFrames(player, frame);
+            ItemStack item = PosterItemManager.createPosterItem(id, "", true, false);
+            frame.setItem(item);
+        }, 5L);*/
     }
 
     /**
@@ -305,18 +321,18 @@ public abstract class SplatterMapManager {
      * @param player     The player removing the map
      * @return
      **/
-    public static PosterMap removeSplatterMap(ItemFrame startFrame, Player player) {
-        final ImageMap map = MapManager.getMap(startFrame.getItem());
-        if (!(map instanceof PosterMap)) {
+    public static PosterMap removeSplatterPoster(ItemFrame startFrame, Player player) {
+        final ImagePoster iposter = PosterManager.getPoster(startFrame.getItem());
+        if (!(iposter instanceof PosterMap)) {
             return null;
         }
-        PosterMap poster = (PosterMap) map;
+        PosterMap poster = (PosterMap) iposter;
         if (!poster.hasColumnData()) {
             return null;
         }
         //We search for the map on the top left corner
         Location startingLocation = poster.findLocationFirstFrame(startFrame, player);
-
+        PluginLogger.info("remove splater " + startingLocation);
         Map<Location, ItemFrame>
                 itemFrameLocations =
                 PosterOnASurface.getItemFramesLocation(player, startingLocation, startFrame.getLocation(),
@@ -325,7 +341,6 @@ public abstract class SplatterMapManager {
         //TODO check if it is the correct map id and check the why it delete more than it should and out of place
         for (Map.Entry<Location, ItemFrame> entry : itemFrameLocations.entrySet()) {
             ItemFrame frame = itemFrameLocations.get(entry.getKey());
-            PluginLogger.info("Frame to delete " + frame);
             if (frame != null) {
                 removePropertiesFromFrames(player, frame);
                 frame.setItem(null);
@@ -336,7 +351,7 @@ public abstract class SplatterMapManager {
     }
 
     public static void addPropertiesToFrames(Player player, ItemFrame frame) {
-        if (Permissions.PLACE_INVISIBLE_SPLATTER_MAP.grantedTo(player)) {
+        if (Permissions.PLACE_INVISIBLE_SPLATTER_POSTER.grantedTo(player)) {
             try {
                 Method setVisible = frame.getClass().getMethod("setVisible", boolean.class);
                 setVisible.invoke(frame, false);

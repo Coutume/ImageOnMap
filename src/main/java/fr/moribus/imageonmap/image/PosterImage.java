@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -113,10 +113,10 @@ public class PosterImage {
     }
 
     /**
-     * Generates the subimage that intersects with the given map rectangle.
+     * Generates the subimage that intersects with the given poster rectangle.
      *
-     * @param x X coordinate of top-left point of the map.
-     * @param y Y coordinate of top-left point of the map.
+     * @param x X coordinate of top-left point of the poster.
+     * @param y Y coordinate of top-left point of the poster.
      * @return the requested subimage.
      */
     private BufferedImage makeSubImage(BufferedImage originalImage, int x, int y) {

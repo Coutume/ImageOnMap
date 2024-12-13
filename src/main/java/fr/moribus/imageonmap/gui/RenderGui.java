@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -99,7 +99,7 @@ public class RenderGui extends ActionGui {
         final String action_key = isWidth ? "width_" : "height_";
         final String currentSize = ChatColor.DARK_GRAY + I.t("Current size: {0} × {1}", width, height);
 
-        action(action_key + "_decrement_10", slot++, getBannerButton(false, true, resize)
+        /*action(action_key + "_decrement_10", slot++, getBannerButton(false, true, resize)
                 .title(ChatColor.RED, I.t("- 10"))
                 .loreLine(currentSize)
                 .loreSeparator()

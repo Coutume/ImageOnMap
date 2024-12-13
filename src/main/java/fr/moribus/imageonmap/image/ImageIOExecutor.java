@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -37,7 +37,7 @@
 package fr.moribus.imageonmap.image;
 
 import fr.moribus.imageonmap.ImageOnMap;
-import fr.moribus.imageonmap.map.ImageMap;
+import fr.moribus.imageonmap.map.ImagePoster;
 import fr.zcraft.quartzlib.components.worker.Worker;
 import fr.zcraft.quartzlib.components.worker.WorkerAttributes;
 import fr.zcraft.quartzlib.components.worker.WorkerRunnable;
@@ -49,13 +49,13 @@ import javax.imageio.ImageIO;
 
 @WorkerAttributes(name = "Image IO")
 public class ImageIOExecutor extends Worker {
-    public static void loadImage(final File file, final Renderer mapRenderer) {
+    public static void loadImage(final File file, final Renderer posterRenderer) {
 
         submitQuery(new WorkerRunnable<Void>() {
             @Override
             public Void run() throws Exception {
                 BufferedImage image = ImageIO.read(file);
-                mapRenderer.setImage(image);
+                posterRenderer.setImage(image);
                 image.flush();//Safe to free
                 return null;
             }
@@ -72,22 +72,22 @@ public class ImageIOExecutor extends Worker {
         });
     }
 
-    public static void saveImage(int mapID, BufferedImage image) {
-        saveImage(ImageOnMap.getPlugin().getImageFile(mapID), image);
+    public static void saveImage(int posterID, BufferedImage image) {
+        saveImage(ImageOnMap.getPlugin().getImageFile(posterID), image);
     }
 
-    public static void saveImage(int[] mapsIDs, PosterImage image) {
-        for (int i = 0, c = mapsIDs.length; i < c; i++) {
+    public static void saveImage(int[] postersIDs, PosterImage image) {
+        for (int i = 0, c = postersIDs.length; i < c; i++) {
             BufferedImage img = image.getImageAt(i);
-            ImageIOExecutor.saveImage(ImageOnMap.getPlugin().getImageFile(mapsIDs[i]), img);
+            ImageIOExecutor.saveImage(ImageOnMap.getPlugin().getImageFile(postersIDs[i]), img);
             img.flush();//Safe to free
         }
     }
 
-    public static void deleteImage(ImageMap map) {
-        int[] mapsIDs = map.getMapsIDs();
-        for (int i = 0, c = mapsIDs.length; i < c; i++) {
-            deleteImage(ImageOnMap.getPlugin().getImageFile(mapsIDs[i]));
+    public static void deleteImage(ImagePoster poster) {
+        int[] postersIDs = poster.getPostersIDs();
+        for (int i = 0, c = postersIDs.length; i < c; i++) {
+            deleteImage(ImageOnMap.getPlugin().getImageFile(postersIDs[i]));
         }
     }
 

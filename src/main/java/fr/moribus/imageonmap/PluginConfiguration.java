@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -52,9 +52,9 @@ public final class PluginConfiguration extends Configuration {
 
     public static final ConfigurationItem<Boolean> CHECK_FOR_UPDATES = item("check-for-updates", true);
 
-    public static final ConfigurationItem<Integer> MAP_GLOBAL_LIMIT =
+    public static final ConfigurationItem<Integer> POSTER_GLOBAL_LIMIT =
             item("map-global-limit", 0, "Limit-map-by-server");
-    public static final ConfigurationItem<Integer> MAP_PLAYER_LIMIT =
+    public static final ConfigurationItem<Integer> POSTER_PLAYER_LIMIT =
             item("map-player-limit", 0, "Limit-map-by-player");
 
     public static final ConfigurationItem<Boolean> SAVE_FULL_IMAGE = item("save-full-image", true);

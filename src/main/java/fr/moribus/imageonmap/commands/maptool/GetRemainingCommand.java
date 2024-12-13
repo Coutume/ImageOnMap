@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -38,7 +38,7 @@ package fr.moribus.imageonmap.commands.maptool;
 
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.ui.MapItemManager;
+import fr.moribus.imageonmap.ui.PosterItemManager;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.i18n.I;
@@ -51,18 +51,18 @@ public class GetRemainingCommand extends IoMCommand {
     protected void run() throws CommandException {
         Player player = playerSender();
 
-        if (MapItemManager.getCacheSize(player) <= 0) {
+        if (PosterItemManager.getCacheSize(player) <= 0) {
             info(I.t("You have no remaining map."));
             return;
         }
 
-        int givenMaps = MapItemManager.giveCache(player);
+        int givenMaps = PosterItemManager.giveCache(player);
 
         if (givenMaps == 0) {
             error(I.t("Your inventory is full! Make some space before requesting the remaining maps."));
         } else {
             info(I.tn("There is {0} map remaining.", "There are {0} maps remaining.",
-                    MapItemManager.getCacheSize(player)));
+                    PosterItemManager.getCacheSize(player)));
         }
     }
 

@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,6 +36,7 @@
 
 package fr.moribus.imageonmap.ui;
 
+import fr.zcraft.quartzlib.tools.PluginLogger;
 import fr.zcraft.quartzlib.tools.world.FlatLocation;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -54,14 +55,13 @@ public class PosterWall {
 
     public boolean isValid() {
         ItemFrame curFrame;
+
         FlatLocation bottomLeft = FlatLocation.minMerged(loc1, loc2);
         FlatLocation loc = bottomLeft.clone();
-
         int distX = FlatLocation.flatBlockDistanceX(loc1, loc2);
         int distY = FlatLocation.flatBlockDistanceY(loc1, loc2);
 
         frames = new ItemFrame[distX * distY];
-
         for (int x = 0; x < distX; x++) {
             for (int y = 0; y < distY; y++) {
                 curFrame = getEmptyFrameAt(loc, loc.getFacing());

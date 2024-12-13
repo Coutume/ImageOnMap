@@ -2,7 +2,7 @@
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
  * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
- * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2023)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -55,11 +55,11 @@ public class Renderer extends MapRenderer {
         this.image = image;
     }
 
-    public static boolean isHandled(MapView map) {
-        if (map == null) {
+    public static boolean isHandled(MapView poster) {
+        if (poster == null) {
             return false;
         }
-        for (MapRenderer renderer : map.getRenderers()) {
+        for (MapRenderer renderer : poster.getRenderers()) {
             if (renderer instanceof Renderer) {
                 return true;
             }
@@ -67,31 +67,32 @@ public class Renderer extends MapRenderer {
         return false;
     }
 
-    public static void installRenderer(PosterImage image, int[] mapsIds) {
-        for (int i = 0; i < mapsIds.length; i++) {
-            installRenderer(image.getImageAt(i), mapsIds[i]);
+    public static void installRenderer(PosterImage image, int[] postersIds) {
+        for (int i = 0; i < postersIds.length; i++) {
+            installRenderer(image.getImageAt(i), postersIds[i]);
         }
     }
 
-    public static void installRenderer(BufferedImage image, int mapID) {
-        MapView map = Bukkit.getMap(mapID);
-        if (map == null) {
-            PluginLogger.warning("Could not install renderer for map {0}: the Minecraft map does not exist", mapID);
+    public static void installRenderer(BufferedImage image, int posterID) {
+        MapView poster = Bukkit.getMap(posterID);
+        if (poster == null) {
+            PluginLogger.warning("Could not install renderer for map {0}: the Minecraft map does not exist",
+                    posterID);
         } else {
-            installRenderer(map).setImage(image);
+            installRenderer(poster).setImage(image);
         }
     }
 
-    public static Renderer installRenderer(MapView map) {
+    public static Renderer installRenderer(MapView poster) {
         Renderer renderer = new Renderer();
-        removeRenderers(map);
-        map.addRenderer(renderer);
+        removeRenderers(poster);
+        poster.addRenderer(renderer);
         return renderer;
     }
 
-    public static void removeRenderers(MapView map) {
-        for (MapRenderer renderer : map.getRenderers()) {
-            map.removeRenderer(renderer);
+    public static void removeRenderers(MapView poster) {
+        for (MapRenderer renderer : poster.getRenderers()) {
+            poster.removeRenderer(renderer);
         }
     }
 

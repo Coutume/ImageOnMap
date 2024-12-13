@@ -13,7 +13,7 @@ commands:
   maps:
     description: Manage maps through a GUI
   givemap:
-    description: Give a map to a player from a playerMapStore, by default take from the player that make the command
+    description: Give a map to a player from a playerPosterStore, by default take from the player that make the command
     usage: /<command> [player_from] player_to map_name
   placemap:
     description: Place a map remotely and deploy it
@@ -125,7 +125,7 @@ permissions:
     default: op
 
   imageonmap.bypassimagelimit:
-    description: "Allows you to bypass permission node check for the number of images in the playerMapStore (by default users have an unlimited amount of images)."
+    description: "Allows you to bypass permission node check for the number of images in the playerPosterStore (by default users have an unlimited amount of images)."
     default: op
 
   imageonmap.bypasswhitelist:
@@ -137,5 +137,5 @@ permissions:
     default: true
 
   imageonmap.remoteplacing:
-    description: "Allows you to remotly place a map from a playerMapStore to a specific position."
+    description: "Allows you to remotly place a map from a playerPosterStore to a specific position."
     default: op
