@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,57 +36,54 @@
 
 package fr.moribus.imageonmap.ui;
 
-import com.google.common.collect.ImmutableMap;
+import fr.moribus.imageonmap.ImageOnMap;
 import fr.moribus.imageonmap.Permissions;
-import fr.moribus.imageonmap.image.MapInitEvent;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.image.PosterInitEvent;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.i18n.I;
-import fr.zcraft.quartzlib.components.nbt.NBT;
-import fr.zcraft.quartzlib.components.nbt.NBTCompound;
-import fr.zcraft.quartzlib.components.nbt.NBTList;
 import fr.zcraft.quartzlib.tools.PluginLogger;
-import fr.zcraft.quartzlib.tools.items.GlowEffect;
 import fr.zcraft.quartzlib.tools.items.ItemStackBuilder;
-import fr.zcraft.quartzlib.tools.reflection.NMSException;
-import fr.zcraft.quartzlib.tools.runners.RunTask;
-import fr.zcraft.quartzlib.tools.text.MessageSender;
 import fr.zcraft.quartzlib.tools.world.FlatLocation;
 import fr.zcraft.quartzlib.tools.world.WorldUtils;
-import java.lang.reflect.Method;
+import java.util.Map;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Rotation;
 import org.bukkit.block.BlockFace;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
+import org.bukkit.scheduler.BukkitScheduler;
 
-//TODO rework splatter effect, using ID is far more stable than nbt tags.
-// To update when adding small picture previsualization.
-public abstract class SplatterMapManager {
-    private SplatterMapManager() {
+// TODO update when adding small picture snapshot.
+public abstract class SplatterPosterManager {
+    private SplatterPosterManager() {
     }
 
-    public static ItemStack makeSplatterMap(PosterMap map) {
+    public static ItemStack makeSplatterPoster(PosterMap poster) {
 
 
-        final ItemStack splatter = new ItemStackBuilder(Material.FILLED_MAP).title(ChatColor.GOLD, map.getName())
+        final ItemStack splatter = new ItemStackBuilder(Material.FILLED_MAP).title(ChatColor.GOLD, poster.getName())
                 .title(ChatColor.DARK_GRAY, " - ").title(ChatColor.GRAY, I.t("Splatter Map"))
                 .title(ChatColor.DARK_GRAY, " - ")
-                .title(ChatColor.GRAY, I.t("{0} × {1}", map.getColumnCount(), map.getRowCount()))
-                .loreLine(ChatColor.GRAY, map.getId()).loreLine()
+                .title(ChatColor.GRAY, I.t("{0} × {1}", poster.getColumnCount(), poster.getRowCount()))
+                .loreLine(ChatColor.GRAY, poster.getId()).loreLine()
                 /// Title in a splatter map tooltip
                 .loreLine(ChatColor.BLUE, I.t("Item frames needed"))
                 /// Size of a map stored in a splatter map
                 .loreLine(ChatColor.GRAY,
-                        I.t("{0} × {1} (total {2} frames)", map.getColumnCount(), map.getRowCount(),
-                                map.getColumnCount() * map.getRowCount()))
+                        I.t("{0} × {1} (total {2} frames)", poster.getColumnCount(), poster.getRowCount(),
+                                poster.getColumnCount() * poster.getRowCount()))
                 .loreLine()
                 /// Title in a splatter map tooltip
                 .loreLine(ChatColor.BLUE, I.t("How to use this?"))
@@ -103,7 +100,7 @@ public abstract class SplatterMapManager {
                 .craftItem();
 
         final MapMeta meta = (MapMeta) splatter.getItemMeta();
-        meta.setMapId(map.getMapIdAt(0));
+        meta.setMapId(poster.getPosterIdAt(0));
         meta.setColor(Color.GREEN);
         splatter.setItemMeta(meta);
 
@@ -128,7 +125,8 @@ public abstract class SplatterMapManager {
      * @return The modified item stack. The instance may be different if the passed item stack is not a craft itemstack.
      */
     public static ItemStack addSplatterAttribute(final ItemStack itemStack) {
-        GlowEffect.addGlow(itemStack);
+        itemStack.addUnsafeEnchantment(Enchantment.LURE, 1);
+        //TODO ADD event to forbid xp duplication and usage in crafting table
         return itemStack;
     }
 
@@ -140,50 +138,22 @@ public abstract class SplatterMapManager {
      * @return True if the attribute was detected.
      */
     public static boolean hasSplatterAttributes(ItemStack itemStack) {
-
-        try {
-            final NBTCompound nbt = NBT.fromItemStack(itemStack);
-            if (!nbt.containsKey("Enchantments")) {
-                return false;
-            }
-            final Object enchantments = nbt.get("Enchantments");
-            if (!(enchantments instanceof NBTList)) {
-                return false;
-            }
-            return !((NBTList) enchantments).isEmpty();
-        } catch (NMSException e) {
-            PluginLogger.error("Unable to get Splatter Map attribute on item", e);
-            return false;
-        }
+        return PosterManager.managesPoster(itemStack);
     }
-
-    /**
-     * Return true if it is a splatter map
-     *
-     * @param itemStack The item to check.
-     * @return True if is a splatter map
-     */
-    public static boolean isSplatterMap(ItemStack itemStack) {
-        if (itemStack == null) {
-            return false;
-        }
-        return hasSplatterAttributes(itemStack) && MapManager.managesMap(itemStack);
-    }
-
 
     /**
      * Return true if it has a specified splatter map
      *
      * @param player The player to check.
-     * @param map    The map to check.
+     * @param poster The map to check.
      * @return True if the player has this map
      */
-    public static boolean hasSplatterMap(Player player, PosterMap map) {
+    public static boolean hasSplatterPoster(Player player, PosterMap poster) {
         Inventory playerInventory = player.getInventory();
 
         for (int i = 0; i < playerInventory.getSize(); ++i) {
             ItemStack item = playerInventory.getItem(i);
-            if (isSplatterMap(item) && map.managesMap(item)) {
+            if (hasSplatterAttributes(item) && poster.managesPoster(item)) {
                 return true;
             }
         }
@@ -198,13 +168,14 @@ public abstract class SplatterMapManager {
      * @param player     Player placing map
      * @return true if the map was correctly placed
      */
-    public static boolean placeSplatterMap(ItemFrame startFrame, Player player, PlayerInteractEntityEvent event) {
-        ImageMap map = MapManager.getMap(player.getInventory().getItemInMainHand());
-
-        if (!(map instanceof PosterMap)) {
+    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
+    public static boolean placeSplatterPoster(ItemFrame startFrame, Player player) {
+        ImagePoster iposter = PosterManager.getPoster(player.getInventory().getItemInMainHand());
+        if (!(iposter instanceof PosterMap)) {
             return false;
         }
-        PosterMap poster = (PosterMap) map;
+
+        PosterMap poster = (PosterMap) iposter;
         PosterWall wall = new PosterWall();
 
         if (startFrame.getFacing().equals(BlockFace.DOWN) || startFrame.getFacing().equals(BlockFace.UP)) {
@@ -218,71 +189,70 @@ public abstract class SplatterMapManager {
             surface.loc2 = endLocation;
 
             if (!surface.isValid(player)) {
-                MessageSender.sendActionBarMessage(player,
-                        I.t("{ce}There is not enough space to place this map ({0} × {1}).",
-                                poster.getColumnCount(),
-                                poster.getRowCount()));
-
-
+                String message =
+                        I.t("§c There is not enough space to place this map ({0} × {1}).", poster.getColumnCount(),
+                                poster.getRowCount());
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
                 return false;
+            }
+            Rotation r = Rotation.NONE;
+            BlockFace bf = WorldUtils.get4thOrientation(player.getLocation());
+            PluginLogger.info("YAW calc {0} YAW {1} ", Math.abs(player.getLocation().getYaw()) - 180f,
+                    player.getLocation().getYaw());
+            switch (bf) {
+                case NORTH:
+                    break;
+                case EAST:
+                    r = r.rotateClockwise();
+                    break;
+                case WEST:
+                    r = r.rotateCounterClockwise();
+                    break;
+                case SOUTH:
+                    r = r.rotateClockwise();
+                    r = r.rotateClockwise();
+                    break;
+
+                default:
+                    throw new IllegalStateException("Unexpected value: " + bf);
             }
 
             int i = 0;
             for (ItemFrame frame : surface.frames) {
-                BlockFace bf = WorldUtils.get4thOrientation(player.getLocation());
-                int id = poster.getMapIdAtReverseZ(i, bf, startFrame.getFacing());
-                Rotation rot = Rotation.NONE;
+
+                bf = WorldUtils.get4thOrientation(player.getLocation());
+                int id = poster.getPosterIdAtReverseZ(i, bf, startFrame.getFacing());
                 switch (frame.getFacing()) {
                     case UP:
                         break;
                     case DOWN:
-                        rot = Rotation.FLIPPED;
+                        r = r.rotateClockwise().rotateClockwise(); //Invert
                         break;
                     default:
-                        //throw new IllegalStateException("Unexpected value: " + frame.getFacing());
+                        throw new IllegalStateException("Unexpected value: " + frame.getFacing());
                 }
-                //Rotation management relative to player rotation the default position is North,
-                // when on ceiling we flipped the rotation
-                RunTask.later(() -> {
-                    addPropertiesToFrames(player, frame);
-                    frame.setItem(
-                            new ItemStackBuilder(Material.FILLED_MAP).nbt(ImmutableMap.of("map", id)).craftItem());
-                }, 5L);
-
-                if (i == 0) {
+                frame.setRotation(r);
+                /*if (i == 0) {
                     //First map need to be rotate one time CounterClockwise
-                    rot = rot.rotateCounterClockwise();
-                }
+                    switch (bf) {
+                        case EAST:
+                            frame.setRotation(r.rotateClockwise());
+                            break;
+                        case WEST:
+                            frame.setRotation(r.rotateCounterClockwise());
+                            break;
+                        case SOUTH:
+                            frame.setRotation(r.rotateClockwise().rotateClockwise());
+                            break;
+                        case NORTH:
+                            break;
+                        default:
+                            throw new IllegalStateException("Unexpected value: " + frame.getFacing());
+                    }
+                }*/
 
-                switch (bf) {
-                    case NORTH:
-                        if (frame.getFacing() == BlockFace.DOWN) {
-                            rot = rot.rotateClockwise();
-                            rot = rot.rotateClockwise();
-                        }
-                        frame.setRotation(rot);
-                        break;
-                    case EAST:
-                        rot = rot.rotateClockwise();
-                        frame.setRotation(rot);
-                        break;
-                    case SOUTH:
-                        if (frame.getFacing() == BlockFace.UP) {
-                            rot = rot.rotateClockwise();
-                            rot = rot.rotateClockwise();
-                        }
-                        frame.setRotation(rot);
-                        break;
-                    case WEST:
-                        rot = rot.rotateCounterClockwise();
-                        frame.setRotation(rot);
-                        break;
-                    default:
-                        throw new IllegalStateException("Unexpected value: " + bf);
-                }
-
-
-                MapInitEvent.initMap(id);
+                PosterInitEvent.initPoster(id);
                 i++;
             }
         } else {
@@ -294,31 +264,43 @@ public abstract class SplatterMapManager {
             wall.loc2 = endLocation;
 
             if (!wall.isValid()) {
-                MessageSender.sendActionBarMessage(player,
-                        I.t("{ce}There is not enough space to place this map ({0} × {1}).", poster.getColumnCount(),
-                                poster.getRowCount()));
+
+                String message =
+                        I.t("§c There is not enough space to place this map ({0} × {1}).", poster.getColumnCount(),
+                                poster.getRowCount());
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
                 return false;
             }
 
             int i = 0;
             for (ItemFrame frame : wall.frames) {
 
-                int id = poster.getMapIdAtReverseY(i);
+                int id = poster.getPosterIdAtReverseY(i);
 
-                RunTask.later(() -> {
-                    addPropertiesToFrames(player, frame);
-                    frame.setItem(
-                            new ItemStackBuilder(Material.FILLED_MAP).nbt(ImmutableMap.of("map", id)).craftItem());
-                }, 5L);
+
+                setupPoster(player, frame, id);
 
 
                 //Force reset of rotation
                 frame.setRotation(Rotation.NONE);
-                MapInitEvent.initMap(id);
+                PosterInitEvent.initPoster(id);
                 ++i;
             }
         }
         return true;
+    }
+
+    private static void setupPoster(Player player, ItemFrame frame, int id) {
+        BukkitScheduler scheduler = ImageOnMap.getPlugin().getServer().getScheduler();
+        scheduler.scheduleSyncDelayedTask(ImageOnMap.getPlugin(), new Runnable() {
+            @Override
+            public void run() {
+                addPropertiesToFrames(player, frame);
+                ItemStack item = PosterItemManager.createPosterItem(id, "", true, false);
+                frame.setItem(item);
+            }
+        }, 5L);
     }
 
     /**
@@ -328,44 +310,27 @@ public abstract class SplatterMapManager {
      * @param player     The player removing the map
      * @return
      **/
-    public static PosterMap removeSplatterMap(ItemFrame startFrame, Player player) {
-        final ImageMap map = MapManager.getMap(startFrame.getItem());
-        if (!(map instanceof PosterMap)) {
+    public static PosterMap removeSplatterPoster(ItemFrame startFrame, Player player) {
+        final ImagePoster iposter = PosterManager.getPoster(startFrame.getItem());
+        if (!(iposter instanceof PosterMap)) {
             return null;
         }
-        PosterMap poster = (PosterMap) map;
+        PosterMap poster = (PosterMap) iposter;
         if (!poster.hasColumnData()) {
             return null;
         }
-        FlatLocation loc = new FlatLocation(startFrame.getLocation(), startFrame.getFacing());
-        ItemFrame[] matchingFrames = null;
-
-        switch (startFrame.getFacing()) {
-            case UP:
-            case DOWN:
-                matchingFrames = PosterOnASurface.getMatchingMapFrames(poster, loc,
-                        MapManager.getMapIdFromItemStack(startFrame.getItem()),
-                        WorldUtils.get4thOrientation(player.getLocation()));//startFrame.getFacing());
-                break;
-
-            case NORTH:
-            case SOUTH:
-            case EAST:
-            case WEST:
-                matchingFrames = PosterWall.getMatchingMapFrames(poster, loc,
-                        MapManager.getMapIdFromItemStack(startFrame.getItem()));
-                break;
-            default:
-                throw new IllegalStateException("Unexpected value: " + startFrame.getFacing());
-        }
-
-        if (matchingFrames == null) {
-            return null;
-        }
-
-        for (ItemFrame frame : matchingFrames) {
+        //We search for the map on the top left corner
+        Location startingLocation = poster.findLocationFirstFrame(startFrame, player);
+        Map<Location, ItemFrame>
+                itemFrameLocations =
+                PosterOnASurface.getItemFramesLocation(player, startingLocation, startFrame.getLocation(),
+                        startFrame.getFacing(),
+                        poster.getRowCount(), poster.getColumnCount());
+        //TODO check if it is the correct map id and check the why it delete more than it should and out of place
+        for (Map.Entry<Location, ItemFrame> entry : itemFrameLocations.entrySet()) {
+            ItemFrame frame = itemFrameLocations.get(entry.getKey());
             if (frame != null) {
-                removePropertiesFromFrames(player, frame);
+                removePropertiesFromFrames(frame);
                 frame.setItem(null);
             }
         }
@@ -374,22 +339,12 @@ public abstract class SplatterMapManager {
     }
 
     public static void addPropertiesToFrames(Player player, ItemFrame frame) {
-        if (Permissions.PLACE_INVISIBLE_SPLATTER_MAP.grantedTo(player)) {
-            try {
-                Method setVisible = frame.getClass().getMethod("setVisible", boolean.class);
-                setVisible.invoke(frame, false);
-            } catch (Exception e) {
-                //1.16-
-            }
+        if (Permissions.PLACE_INVISIBLE_SPLATTER_POSTER.grantedTo(player)) {
+            frame.setVisible(false);
         }
     }
 
-    public static void removePropertiesFromFrames(Player player, ItemFrame frame) {
-        try {
-            Method setVisible = frame.getClass().getMethod("setVisible", boolean.class);
-            setVisible.invoke(frame, true);
-        } catch (Exception e) {
-            //1.16-
-        }
+    public static void removePropertiesFromFrames(ItemFrame frame) {
+        frame.setVisible(true);
     }
 }

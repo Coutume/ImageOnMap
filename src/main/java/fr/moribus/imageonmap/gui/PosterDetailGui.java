@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,11 +36,11 @@
 
 package fr.moribus.imageonmap.gui;
 
+
 import fr.moribus.imageonmap.Permissions;
-import fr.moribus.imageonmap.map.ImageMap;
+import fr.moribus.imageonmap.map.ImagePoster;
 import fr.moribus.imageonmap.map.PosterMap;
-import fr.moribus.imageonmap.map.SingleMap;
-import fr.moribus.imageonmap.ui.MapItemManager;
+import fr.moribus.imageonmap.ui.PosterItemManager;
 import fr.zcraft.quartzlib.components.gui.ExplorerGui;
 import fr.zcraft.quartzlib.components.gui.Gui;
 import fr.zcraft.quartzlib.components.gui.GuiAction;
@@ -53,25 +53,40 @@ import org.apache.commons.lang.ArrayUtils;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 
-public class MapDetailGui extends ExplorerGui<Integer> {
-    private final ImageMap map;
-    private OfflinePlayer offplayer;
-    private String name;
+public class PosterDetailGui extends ExplorerGui<Integer> {
+    private final ImagePoster iposter;
+    private final OfflinePlayer offplayer;
+    private final String name;
 
-    public MapDetailGui(ImageMap map, OfflinePlayer p, String name) {
+    public PosterDetailGui(ImagePoster iposter, OfflinePlayer p, String name) {
         super();
-        this.map = map;
+        this.iposter = iposter;
         this.offplayer = p;
         this.name = name;
+    }
+
+    private void setPosterPartCustomModelData(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+
+        //TODO make it prettier and fix issues with scrolling
+        if (iposter instanceof PosterMap) {
+            meta.setCustomModelData(1000);//TODO ID was 1000 maybe a bug there to check
+            item.setItemMeta(meta);
+        }
     }
 
     @Override
     protected ItemStack getViewItem(int x, int y) {
         final Material partMaterial = y % 2 == x % 2 ? Material.MAP : Material.PAPER;
+        ItemStackBuilder builder = new ItemStackBuilder(partMaterial);
+        ItemStack itemStack = builder.craftItem();
 
-        final ItemStackBuilder builder = new ItemStackBuilder(partMaterial)
+        setPosterPartCustomModelData(itemStack);
+        builder = new ItemStackBuilder(itemStack);
+        builder = builder
                 .title(I.t(getPlayerLocale(), "{green}Map part"))
                 .lore(I.t(getPlayerLocale(), "{gray}Row: {white}{0}", y + 1))
                 .lore(I.t(getPlayerLocale(), "{gray}Column: {white}{0}", x + 1));
@@ -84,8 +99,8 @@ public class MapDetailGui extends ExplorerGui<Integer> {
     }
 
     @Override
-    protected ItemStack getViewItem(Integer mapId) {
-        final int index = ((PosterMap) map).getIndex(mapId);
+    protected ItemStack getViewItem(Integer posterId) {
+        final int index = ((PosterMap) iposter).getIndex(posterId);
         final Material partMaterial = index % 2 == 0 ? Material.MAP : Material.PAPER;
 
         final ItemStackBuilder builder = new ItemStackBuilder(partMaterial)
@@ -105,50 +120,44 @@ public class MapDetailGui extends ExplorerGui<Integer> {
             return null;
         }
 
-        if (map instanceof SingleMap) {
-            return MapItemManager.createMapItem((SingleMap) map, true);
-        } else if (map instanceof PosterMap) {
-            return MapItemManager.createMapItem((PosterMap) map, x, y);
+        if (iposter instanceof PosterMap) {
+            return PosterItemManager.createPosterItem((PosterMap) iposter, x, y);
         }
 
-        throw new IllegalStateException("Unsupported map type: " + map.getType());
+        throw new IllegalStateException("Unsupported map type: " + iposter.getType());
     }
 
     @Override
-    protected ItemStack getPickedUpItem(Integer mapId) {
+    protected ItemStack getPickedUpItem(Integer posterId) {
         if (!Permissions.GET.grantedTo(getPlayer())) {
             return null;
         }
 
-        final PosterMap poster = (PosterMap) map;
-        return MapItemManager.createMapItem(poster, poster.getIndex(mapId));
+        final PosterMap poster = (PosterMap) iposter;
+        return PosterItemManager.createPosterItem(poster, poster.getIndex(posterId));
     }
 
     @Override
     protected ItemStack getEmptyViewItem() {
-        if (map instanceof SingleMap) {
-            return getViewItem(0, 0);
-        } else {
-            return super.getEmptyViewItem();
-        }
+        return super.getEmptyViewItem();
     }
 
     @Override
     protected void onUpdate() {
-        /// Title of the map details GUI
+        /// Title of the poster details GUI
         if (offplayer.getUniqueId().equals(getPlayer().getUniqueId())) {
-            setTitle(I.t(getPlayerLocale(), "Your maps » {black}{0}", map.getName()));
+            setTitle(I.t(getPlayerLocale(), "Your maps » {black}{0}", iposter.getName()));
         } else {
-            setTitle(I.t(getPlayerLocale(), "{1}'s maps » {black}{0}", map.getName(), name));
+            setTitle(I.t(getPlayerLocale(), "{1}'s maps » {black}{0}", iposter.getName(), name));
         }
         setKeepHorizontalScrollingSpace(true);
 
-        if (map instanceof PosterMap) {
-            PosterMap poster = (PosterMap) map;
+        if (iposter instanceof PosterMap) {
+            PosterMap poster = (PosterMap) iposter;
             if (poster.hasColumnData()) {
                 setDataShape(poster.getColumnCount(), poster.getRowCount());
             } else {
-                setData(ArrayUtils.toObject(poster.getMapsIDs()));
+                setData(ArrayUtils.toObject(poster.getPostersIDs()));
             }
         } else {
             setDataShape(1, 1);
@@ -190,7 +199,7 @@ public class MapDetailGui extends ExplorerGui<Integer> {
 
         if (!canRename && !canDelete) {
             backSlot = getSize() - 5;
-        } else if (map instanceof PosterMap && ((PosterMap) map).getColumnCount() <= INVENTORY_ROW_SIZE) {
+        } else if (iposter instanceof PosterMap && ((PosterMap) iposter).getColumnCount() <= INVENTORY_ROW_SIZE) {
             backSlot++;
         }
 
@@ -220,20 +229,19 @@ public class MapDetailGui extends ExplorerGui<Integer> {
                     I.sendT(getPlayer(), "{ce}Map names can't be empty.");
                     return;
                 }
-                if (newName.equals(map.getName())) {
+                if (newName.equals(iposter.getName())) {
                     return;
                 }
 
-                map.rename(newName);
+                iposter.rename(newName);
                 I.sendT(getPlayer(), "{cs}Map successfully renamed.");
 
                 if (getParent() != null) {
                     RunTask.later(() -> Gui.open(getPlayer(), this), 1L);
-
                 } else {
                     close();
                 }
-            }, map.getName(), this);
+            }, iposter.getName(), this);
 
         } catch (IllegalStateException e) {
             PluginLogger.error("Error while renaming map: ", e);
@@ -247,7 +255,7 @@ public class MapDetailGui extends ExplorerGui<Integer> {
             update();
             return;
         }
-        Gui.open(getPlayer(), new ConfirmDeleteMapGui(map), this);
+        Gui.open(getPlayer(), new ConfirmDeletePosterGui(iposter), this);
     }
 
     @GuiAction("back")

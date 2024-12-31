@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,77 +36,70 @@
 
 package fr.moribus.imageonmap.commands.maptool;
 
-import fr.moribus.imageonmap.ImageOnMap;
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.i18n.I;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-@CommandInfo(name = "get",usageParameters = "[player name]:<map name>")
+@CommandInfo(name = "get", usageParameters = "[player name]:<map name>")
 public class GetCommand extends IoMCommand {
     @Override
     protected void run() throws CommandException {
         ArrayList<String> arguments = getArgs();
 
-        if (arguments.size() > 2) {
-            throwInvalidArgument(I.t("Too many parameters!"));
+        boolean isTooMany = arguments.size() > 2;
+        boolean isTooFew = arguments.isEmpty();
+        if (!checkArguments(isTooMany, isTooFew)) {
             return;
         }
-        if (arguments.size() < 1) {
-            throwInvalidArgument(I.t("Too few parameters!"));
-            return;
-        }
+
         final String playerName;
-        final String mapName;
+        final String posterName;
         final Player sender = playerSender();
 
         if (arguments.size() == 1) {
             playerName = sender.getName();
-            mapName = arguments.get(0);
+            posterName = arguments.get(0);
         } else {
             if (!Permissions.GETOTHER.grantedTo(sender)) {
                 throwNotAuthorized();
                 return;
             }
             playerName = arguments.get(0);
-            mapName = arguments.get(1);
+            posterName = arguments.get(1);
         }
 
+        UUID uuid = getPlayerUUID(playerName);
+        if (!sender.isOnline()) {
+            return;
+        }
 
+        ImagePoster poster = PosterManager.getPoster(uuid, posterName);
 
+        if (poster == null) {
+            warning(sender, I.t("This map does not exist."));
+            return;
+        }
 
+        if (poster.give(sender)) {
+            info(I.t("The requested map was too big to fit in your inventory."));
+            info(I.t("Use '/maptool getremaining' to get the remaining maps."));
+        }
 
-        retrieveUUID(playerName, uuid -> {
-
-            if (!sender.isOnline()) {
-                return;
-            }
-
-            ImageMap map = MapManager.getMap(uuid, mapName);
-
-            if (map == null) {
-                warning(sender, I.t("This map does not exist."));
-                return;
-            }
-
-            if (map.give(sender)) {
-                info(I.t("The requested map was too big to fit in your inventory."));
-                info(I.t("Use '/maptool getremaining' to get the remaining maps."));
-            }
-        });
     }
 
     @Override
     protected List<String> complete() throws CommandException {
         if (args.length == 1) {
-            return getMatchingMapNames(playerSender(), args[0]);
+            return getMatchingPosterNames(playerSender(), args[0]);
         }
         return null;
     }

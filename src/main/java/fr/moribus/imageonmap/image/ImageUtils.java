@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -123,6 +123,29 @@ public class ImageUtils {
             throw e;
         }
 
+    }
+
+    public static ScalingType scalingTypeFromName(String resize) {
+        switch (resize) {
+            case "stretch":
+            case "stretched":
+            case "resize-stretched":
+                return ScalingType.STRETCHED;
+
+            case "cover":
+            case "covered":
+            case "resize-covered":
+                return ScalingType.COVERED;
+
+            case "contain":
+            case "contained":
+            case "resize-contained":
+            case "resize":
+                return ScalingType.CONTAINED;
+
+            default:
+                return ScalingType.NONE;
+        }
     }
 
     public enum ScalingType {

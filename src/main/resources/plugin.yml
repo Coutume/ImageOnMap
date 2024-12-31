@@ -1,20 +1,23 @@
 name: ImageOnMap
 main: fr.moribus.imageonmap.ImageOnMap
-version: "4.2.2"
+version: "5.0.0"
 api-version: "1.13"
 
 
 commands:
   tomap:
-    description: render an image in a map
+    description: Render an image in a map
     usage: /<command> [URL]
   maptool:
     description: Manage maps
   maps:
     description: Manage maps through a GUI
   givemap:
-    description: give a map to a player from a player map store, by default take from the player that make the command
+    description: Give a map to a player from a playerPosterStore, by default take from the player that make the command
     usage: /<command> [player_from] player_to map_name
+  placemap:
+    description: Place a map remotely and deploy it
+    usage: /<command> [player_from]:<map_name> <N/S/E/W> <UP/DOWN/WALL> x y z
 
 permissions:
   imageonmap.*:
@@ -42,6 +45,8 @@ permissions:
       imageonmap.bypassimagelimit: false
       imageonmap.bypasswhitelist: true
       imageonmap.placeinvisiblesplattermap: true
+      imageonmap.remoteplacing: false
+      imageonmap.repairmap: true
 
   imageonmap.userender:
     description: "Allows you to use /tomap and related commands (/maptool getremaining). Alias of imageonmap.new."
@@ -120,7 +125,7 @@ permissions:
     default: op
 
   imageonmap.bypassimagelimit:
-    description: "Allows you to bypass permission node check for the number of images in the playerMapStore (by default users have an unlimited amount of images)."
+    description: "Allows you to bypass permission node check for the number of images in the playerPosterStore (by default users have an unlimited amount of images)."
     default: op
 
   imageonmap.bypasswhitelist:
@@ -130,3 +135,7 @@ permissions:
   imageonmap.placeinvisiblesplattermap:
     description: "Allows you to make the item frame on which you placed your splatter map invisible."
     default: true
+
+  imageonmap.remoteplacing:
+    description: "Allows you to remotly place a map from a playerPosterStore to a specific position."
+    default: op

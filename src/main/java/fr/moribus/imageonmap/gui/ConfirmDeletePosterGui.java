@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -37,9 +37,9 @@
 package fr.moribus.imageonmap.gui;
 
 import fr.moribus.imageonmap.Permissions;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
-import fr.moribus.imageonmap.map.MapManagerException;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
+import fr.moribus.imageonmap.map.PosterManagerException;
 import fr.zcraft.quartzlib.components.gui.ActionGui;
 import fr.zcraft.quartzlib.components.gui.Gui;
 import fr.zcraft.quartzlib.components.gui.GuiAction;
@@ -52,7 +52,7 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 
-public class ConfirmDeleteMapGui extends ActionGui {
+public class ConfirmDeletePosterGui extends ActionGui {
     private static final int BUTTONS_WIDTH = 4;
 
     private static final int FIRST_SLOT_DELETE_BUTTON = 27;
@@ -89,7 +89,7 @@ public class ConfirmDeleteMapGui extends ActionGui {
     /**
      * The map being deleted.
      */
-    private final ImageMap mapToDelete;
+    private final ImagePoster posterToDelete;
 
     /**
      * A source of randomness.
@@ -99,16 +99,16 @@ public class ConfirmDeleteMapGui extends ActionGui {
 
 
     /**
-     * @param mapToDelete The map being deleted.
+     * @param posterToDelete The poster being deleted.
      */
-    public ConfirmDeleteMapGui(ImageMap mapToDelete) {
-        this.mapToDelete = mapToDelete;
+    public ConfirmDeletePosterGui(ImagePoster posterToDelete) {
+        this.posterToDelete = posterToDelete;
     }
 
     @Override
     protected void onUpdate() {
-        /// The title of the map deletion GUI. {0}: map name.
-        setTitle(I.t(getPlayerLocale(), "{0} » {black}Confirm deletion", mapToDelete.getName()));
+        /// The title of the poster deletion GUI. {0}: poster name.
+        setTitle(I.t(getPlayerLocale(), "{0} » {black}Confirm deletion", posterToDelete.getName()));
         setSize(6 * 9);
 
 
@@ -120,9 +120,9 @@ public class ConfirmDeleteMapGui extends ActionGui {
                 /// The end, in the lore, of a title starting with “You're about to destroy this map...”.
                 .lore(I.t(getPlayerLocale(), "{red}...{italic}forever{red}."))
                 .loreLine()
-                .lore(I.t(getPlayerLocale(), "{gray}Name: {white}{0}", mapToDelete.getName()))
-                .lore(I.t(getPlayerLocale(), "{gray}Map ID: {white}{0}", mapToDelete.getId()))
-                .lore(I.t(getPlayerLocale(), "{gray}Maps inside: {white}{0}", mapToDelete.getMapsIDs().length))
+                .lore(I.t(getPlayerLocale(), "{gray}Name: {white}{0}", posterToDelete.getName()))
+                .lore(I.t(getPlayerLocale(), "{gray}Map ID: {white}{0}", posterToDelete.getId()))
+                .lore(I.t(getPlayerLocale(), "{gray}Maps inside: {white}{0}", posterToDelete.getPostersIDs().length))
                 .hideAllAttributes()
         );
 
@@ -163,25 +163,25 @@ public class ConfirmDeleteMapGui extends ActionGui {
     @GuiAction("delete")
     protected void delete() {
 
-        // Does the player still have the permission to delete a map?
+        // Does the player still have the permission to delete a poster?
         if (!Permissions.DELETE.grantedTo(getPlayer())) {
             I.sendT(getPlayer(), "{ce}You are no longer allowed to do that.");
             close();
             return;
         }
 
-        MapManager.clear(getPlayer().getInventory(), mapToDelete);
+        PosterManager.clear(getPlayer().getInventory(), posterToDelete);
 
         try {
-            MapManager.deleteMap(mapToDelete);
+            PosterManager.deletePoster(posterToDelete);
             getPlayer().sendMessage(I.t("{gray}Map successfully deleted."));
-        } catch (MapManagerException ex) {
+        } catch (PosterManagerException ex) {
             PluginLogger.warning("Error while deleting map", ex);
             getPlayer().sendMessage(ChatColor.RED + ex.getMessage());
         }
 
 
-        // We try to open the map list GUI, if the map was deleted, before the details GUI
+        // We try to open the poster list GUI, if the poster was deleted, before the details GUI
         // (so the grandparent GUI).
         if (getParent() != null && getParent().getParent() != null) {
             Gui.open(getPlayer(), getParent().getParent());

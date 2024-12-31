@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -40,11 +40,12 @@ import fr.moribus.imageonmap.ImageOnMap;
 import fr.moribus.imageonmap.PluginConfiguration;
 import fr.moribus.imageonmap.image.ImageIOExecutor;
 import fr.moribus.imageonmap.image.PosterImage;
-import fr.moribus.imageonmap.map.MapManagerException.Reason;
+import fr.moribus.imageonmap.map.PosterManagerException.Reason;
 import fr.zcraft.quartzlib.tools.PluginLogger;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -54,9 +55,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.scheduler.BukkitTask;
 
-public abstract class MapManager {
+public abstract class PosterManager {
     private static final long SAVE_DELAY = 200;
-    private static final ArrayList<PlayerMapStore> playerMaps = new ArrayList<PlayerMapStore>();
+    private static final ArrayList<PlayerPosterStore> playerPosters = new ArrayList<PlayerPosterStore>();
     private static BukkitTask autosaveTask;
 
     public static void init() {
@@ -65,16 +66,17 @@ public abstract class MapManager {
 
     public static void exit() {
         save();
-        playerMaps.clear();
+        playerPosters.clear();
         if (autosaveTask != null) {
             autosaveTask.cancel();
         }
     }
 
-    public static boolean managesMap(int mapID) {
-        synchronized (playerMaps) {
-            for (PlayerMapStore mapStore : playerMaps) {
-                if (mapStore.managesMap(mapID)) {
+    @Deprecated
+    public static boolean managesPoster(int posterID) {
+        synchronized (playerPosters) {
+            for (PlayerPosterStore posterStore : playerPosters) {
+                if (posterStore.managesPoster(posterID)) {
                     return true;
                 }
             }
@@ -82,7 +84,7 @@ public abstract class MapManager {
         return false;
     }
 
-    public static boolean managesMap(ItemStack item) {
+    public static boolean managesPoster(ItemStack item) {
         if (item == null) {
             return false;
         }
@@ -90,9 +92,10 @@ public abstract class MapManager {
             return false;
         }
 
-        synchronized (playerMaps) {
-            for (PlayerMapStore mapStore : playerMaps) {
-                if (mapStore.managesMap(item)) {
+        synchronized (playerPosters) {
+            for (PlayerPosterStore posterStore : playerPosters) {
+                if (posterStore.managesPoster(item)) {
+                    //duplicated ? maybe to remove from posterstore
                     return true;
                 }
             }
@@ -100,30 +103,35 @@ public abstract class MapManager {
         return false;
     }
 
-    public static ImageMap createMap(UUID playerUUID, int mapID) throws MapManagerException {
-        ImageMap newMap = new SingleMap(playerUUID, mapID);
-        addMap(newMap);
-        return newMap;
+    public static ImagePoster createPoster(UUID playerUUID, int posterID) throws PosterManagerException {
+        //ImagePoster newPoster = new SinglePoster(playerUUID, posterID);
+        int[] ids = new int[] {posterID};
+        ImagePoster newPoster = new PosterMap(playerUUID, ids, 1, 1);
+        addPoster(newPoster);//TODO refactor this
+        return newPoster;
     }
 
-    public static ImageMap createMap(PosterImage image, UUID playerUUID, int[] mapsIDs) throws MapManagerException {
-        ImageMap newMap;
+    public static ImagePoster createPoster(PosterImage image, UUID playerUUID, int[] postersIDs)
+            throws PosterManagerException {
+        ImagePoster newPoster;
 
         if (image.getImagesCount() == 1) {
-            newMap = new SingleMap(playerUUID, mapsIDs[0]);
+            newPoster = new PosterMap(playerUUID, postersIDs, 1, 1);//TODO refactor this
+            //newPoster = new SinglePoster(playerUUID, postersIDs[0]);
         } else {
-            newMap = new PosterMap(playerUUID, mapsIDs, image.getColumns(), image.getLines());
+            PluginLogger.info("pb ici ? " + image.getColumns() + " " + image.getLines());
+            newPoster = new PosterMap(playerUUID, postersIDs, image.getColumns(), image.getLines());
         }
-        addMap(newMap);
-        return newMap;
+        addPoster(newPoster);
+        return newPoster;
     }
 
-    public static int[] getNewMapsIds(int amount) {
-        int[] mapsIds = new int[amount];
+    public static int[] getNewPostersIds(int amount) {
+        int[] postersIDs = new int[amount];
         for (int i = 0; i < amount; i++) {
-            mapsIds[i] = Bukkit.createMap(Bukkit.getWorlds().get(0)).getId();
+            postersIDs[i] = Bukkit.createMap(Bukkit.getWorlds().get(0)).getId();
         }
-        return mapsIds;
+        return postersIDs;
     }
 
     /**
@@ -132,7 +140,7 @@ public abstract class MapManager {
      * @param item The item stack
      * @return The map ID, or 0 if invalid.
      */
-    public static int getMapIdFromItemStack(final ItemStack item) {
+    public static int getPosterIDFromItemStack(final ItemStack item) {
         final ItemMeta meta = item.getItemMeta();
         if (!(meta instanceof MapMeta)) {
             return 0;
@@ -141,36 +149,36 @@ public abstract class MapManager {
         return ((MapMeta) meta).hasMapId() ? ((MapMeta) meta).getMapId() : 0;
     }
 
-    public static void addMap(ImageMap map) throws MapManagerException {
-        getPlayerMapStore(map.getUserUUID()).addMap(map);
+    public static void addPoster(ImagePoster poster) throws PosterManagerException {
+        getplayerPosterStore(poster.getUserUUID()).addPoster(poster);
     }
 
-    public static void insertMap(ImageMap map) {
-        getPlayerMapStore(map.getUserUUID()).insertMap(map);
+    public static void insertPoster(ImagePoster poster) {
+        getplayerPosterStore(poster.getUserUUID()).insertPoster(poster);
     }
 
-    public static void deleteMap(ImageMap map) throws MapManagerException {
-        getPlayerMapStore(map.getUserUUID()).deleteMap(map);
-        ImageIOExecutor.deleteImage(map);
+    public static void deletePoster(ImagePoster poster) throws PosterManagerException {
+        getplayerPosterStore(poster.getUserUUID()).deletePoster(poster);
+        ImageIOExecutor.deleteImage(poster);
     }
 
     public static void notifyModification(UUID playerUUID) {
-        getPlayerMapStore(playerUUID).notifyModification();
+        getplayerPosterStore(playerUUID).notifyModification();
         if (autosaveTask == null) {
-            Bukkit.getScheduler().runTaskLater(ImageOnMap.getPlugin(), new AutosaveRunnable(), SAVE_DELAY);
+            Bukkit.getScheduler().runTaskLater(ImageOnMap.getPlugin(), new AutoSaveRunnable(), SAVE_DELAY);
         }
     }
 
-    public static String getNextAvailableMapID(String mapId, UUID playerUUID) {
-        return getPlayerMapStore(playerUUID).getNextAvailableMapID(mapId);
+    public static String getNextAvailablePosterID(String posterID, UUID playerUUID) {
+        return getplayerPosterStore(playerUUID).getNextAvailablePosterID(posterID);
     }
 
-    public static List<ImageMap> getMapList(UUID playerUUID) {
-        return getPlayerMapStore(playerUUID).getMapList();
+    public static List<ImagePoster> getPosterList(UUID playerUUID) {
+        return getplayerPosterStore(playerUUID).getPosterList();
     }
 
-    public static ImageMap[] getMaps(UUID playerUUID) {
-        return getPlayerMapStore(playerUUID).getMaps();
+    public static ImagePoster[] getPosters(UUID playerUUID) {
+        return getplayerPosterStore(playerUUID).getPosters();
     }
 
     /**
@@ -179,27 +187,27 @@ public abstract class MapManager {
      * @param playerUUID The player's UUID.
      * @return The count.
      */
-    public static int getMapPartCount(UUID playerUUID) {
-        return getPlayerMapStore(playerUUID).getMapCount();
+    public static int getPosterPartCount(UUID playerUUID) {
+        return getplayerPosterStore(playerUUID).getPosterCount();
     }
 
-    public static ImageMap getMap(UUID playerUUID, String mapId) {
-        return getPlayerMapStore(playerUUID).getMap(mapId);
+    public static ImagePoster getPoster(UUID playerUUID, String posterID) {
+        return getplayerPosterStore(playerUUID).getPoster(posterID);
     }
 
     /**
-     * Returns the {@link ImageMap} this map belongs to.
+     * Returns the {@link ImagePoster} this map belongs to.
      *
-     * @param mapId The ID of the Minecraft map.
-     * @return The {@link ImageMap}.
+     * @param posterID The ID of the Minecraft map.
+     * @return The {@link ImagePoster}.
      */
-    public static ImageMap getMap(int mapId) {
-        synchronized (playerMaps) {
-            for (PlayerMapStore mapStore : playerMaps) {
-                if (mapStore.managesMap(mapId)) {
-                    for (ImageMap map : mapStore.getMapList()) {
-                        if (map.managesMap(mapId)) {
-                            return map;
+    public static ImagePoster getPoster(int posterID) {
+        synchronized (playerPosters) {
+            for (PlayerPosterStore posterStore : playerPosters) {
+                if (posterStore.managesPoster(posterID)) {
+                    for (ImagePoster poster : posterStore.getPosterList()) {
+                        if (poster.managesPoster(posterID)) {
+                            return poster;
                         }
                     }
                 }
@@ -210,32 +218,32 @@ public abstract class MapManager {
     }
 
     /**
-     * Returns the {@link ImageMap} this map belongs to.
+     * Returns the {@link ImagePoster} this map belongs to.
      *
      * @param item The map, as an {@link ItemStack}.
-     * @return The {@link ImageMap}.
+     * @return The {@link ImagePoster}.
      */
-    public static ImageMap getMap(ItemStack item) {
+    public static ImagePoster getPoster(ItemStack item) {
         if (item == null) {
             return null;
         }
         if (item.getType() != Material.FILLED_MAP) {
             return null;
         }
-        return getMap(getMapIdFromItemStack(item));
+        return getPoster(getPosterIDFromItemStack(item));
     }
 
     public static void clear(Inventory inventory) {
         for (int i = 0, c = inventory.getSize(); i < c; i++) {
-            if (managesMap(inventory.getItem(i))) {
+            if (managesPoster(inventory.getItem(i))) {
                 inventory.setItem(i, new ItemStack(Material.AIR));
             }
         }
     }
 
-    public static void clear(Inventory inventory, ImageMap map) {
+    public static void clear(Inventory inventory, ImagePoster poster) {
         for (int i = 0, c = inventory.getSize(); i < c; i++) {
-            if (map.managesMap(inventory.getItem(i))) {
+            if (poster.managesPoster(inventory.getItem(i))) {
                 inventory.setItem(i, new ItemStack(Material.AIR));
             }
         }
@@ -268,12 +276,12 @@ public abstract class MapManager {
     //Loading
     public static void load(boolean verbose) {
         int loadedFilesCount = 0;
-        for (File file : ImageOnMap.getPlugin().getMapsDirectory().listFiles()) {
+        for (File file : Objects.requireNonNull(ImageOnMap.getPlugin().getPostersDirectory().listFiles())) {
             UUID uuid = getUUIDFromFile(file);
             if (uuid == null) {
                 continue;
             }
-            getPlayerMapStore(uuid);
+            getplayerPosterStore(uuid);
             ++loadedFilesCount;
         }
 
@@ -283,25 +291,25 @@ public abstract class MapManager {
     }
 
     public static void save() {
-        synchronized (playerMaps) {
-            for (PlayerMapStore tmpStore : playerMaps) {
+        synchronized (playerPosters) {
+            for (PlayerPosterStore tmpStore : playerPosters) {
                 tmpStore.save();
             }
         }
     }
 
-    public static void checkMapLimit(ImageMap map) throws MapManagerException {
-        checkMapLimit(map.getMapCount(), map.getUserUUID());
+    public static void checkPosterLimit(ImagePoster poster) throws PosterManagerException {
+        checkPosterLimit(poster.getPosterCount(), poster.getUserUUID());
     }
 
-    public static void checkMapLimit(int newMapsCount, UUID userUUID) throws MapManagerException {
-        int limit = PluginConfiguration.MAP_GLOBAL_LIMIT.get();
+    public static void checkPosterLimit(int newPostersCount, UUID userUUID) throws PosterManagerException {
+        int limit = PluginConfiguration.POSTER_GLOBAL_LIMIT.get();
 
-        if (limit > 0 && getMapCount() + newMapsCount > limit) {
-            throw new MapManagerException(Reason.MAXIMUM_SERVER_MAPS_EXCEEDED);
+        if (limit > 0 && getPosterCount() + newPostersCount > limit) {
+            throw new PosterManagerException(Reason.MAXIMUM_SERVER_POSTERS_EXCEEDED);
         }
 
-        getPlayerMapStore(userUUID).checkMapLimit(newMapsCount);
+        getplayerPosterStore(userUUID).checkPosterLimit(newPostersCount);
     }
 
     /**
@@ -309,14 +317,14 @@ public abstract class MapManager {
      *
      * @return The count.
      */
-    public static int getMapCount() {
-        int mapCount = 0;
-        synchronized (playerMaps) {
-            for (PlayerMapStore tmpStore : playerMaps) {
-                mapCount += tmpStore.getMapCount();
+    public static int getPosterCount() {
+        int posterCount = 0;
+        synchronized (playerPosters) {
+            for (PlayerPosterStore tmpStore : playerPosters) {
+                posterCount += tmpStore.getPosterCount();
             }
         }
-        return mapCount;
+        return posterCount;
     }
 
     /**
@@ -326,8 +334,8 @@ public abstract class MapManager {
      */
     public static int getImagesCount() {
         int imagesCount = 0;
-        synchronized (playerMaps) {
-            for (PlayerMapStore tmpStore : playerMaps) {
+        synchronized (playerPosters) {
+            for (PlayerPosterStore tmpStore : playerPosters) {
                 imagesCount += tmpStore.getImagesCount();
             }
         }
@@ -337,47 +345,47 @@ public abstract class MapManager {
     /**
      * Returns if the given map ID is valid and exists in the current save.
      *
-     * @param mapId the map ID.
+     * @param posterID the map ID.
      * @return true if the given map ID is valid and exists in the current save, false otherwise.
      */
-    public static boolean mapIdExists(int mapId) {
+    public static boolean posterIDExists(int posterID) {
         try {
-            return Bukkit.getMap(mapId) != null;
+            return Bukkit.getMap(posterID) != null;
         } catch (Throwable ex) {
             return false;
         }
     }
 
-    public static PlayerMapStore getPlayerMapStore(UUID playerUUID) {
-        PlayerMapStore store;
-        synchronized (playerMaps) {
-            store = getExistingPlayerMapStore(playerUUID);
+    public static PlayerPosterStore getplayerPosterStore(UUID playerUUID) {
+        PlayerPosterStore store;
+        synchronized (playerPosters) {
+            store = getExistingplayerPosterStore(playerUUID);
             if (store == null) {
-                store = new PlayerMapStore(playerUUID);
+                store = new PlayerPosterStore(playerUUID);
 
-                playerMaps.add(store);
+                playerPosters.add(store);
                 store.load();
             }
         }
         return store;
     }
 
-    private static PlayerMapStore getExistingPlayerMapStore(UUID playerUUID) {
-        synchronized (playerMaps) {
-            for (PlayerMapStore mapStore : playerMaps) {
-                if (mapStore.getUUID().equals(playerUUID)) {
-                    return mapStore;
+    private static PlayerPosterStore getExistingplayerPosterStore(UUID playerUUID) {
+        synchronized (playerPosters) {
+            for (PlayerPosterStore posterStore : playerPosters) {
+                if (posterStore.getUUID().equals(playerUUID)) {
+                    return posterStore;
                 }
             }
         }
         return null;
     }
 
-    private static class AutosaveRunnable implements Runnable {
+    private static class AutoSaveRunnable implements Runnable {
         @Override
         public void run() {
-            synchronized (playerMaps) {
-                for (PlayerMapStore toolStore : playerMaps) {
+            synchronized (playerPosters) {
+                for (PlayerPosterStore toolStore : playerPosters) {
                     if (toolStore.isModified()) {
                         toolStore.save();
                     }

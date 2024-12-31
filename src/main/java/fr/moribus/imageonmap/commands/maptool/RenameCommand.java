@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -34,30 +34,12 @@
  * knowledge of the CeCILL license and that you accept its terms.
  */
 
-/*
- * Copyright (C) 2013 Moribus
- * Copyright (C) 2015 ProkopyL <prokopylmc@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package fr.moribus.imageonmap.commands.maptool;
 
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.i18n.I;
@@ -70,27 +52,27 @@ public class RenameCommand extends IoMCommand {
 
     @Override
     protected void run() throws CommandException {
+        ArrayList<String> arguments = getArgs();
 
-        ArrayList<String> argList = getArgs();
-
-        if (argList.size() != 2) {
-            warning(I.t("Not enough or too many arguments! Usage: /maptool rename <map name> <new map name>"));
+        boolean isTooMany = arguments.size() > 2;
+        boolean isTooFew = arguments.size() < 2;
+        if (!checkArguments(isTooMany, isTooFew)) {
             return;
         }
-
-        ImageMap map = MapManager.getMap(playerSender().getUniqueId(), argList.get(0));
-        if (map == null) {
+        String oldName = arguments.get(0);
+        ImagePoster poster = PosterManager.getPoster(playerSender().getUniqueId(), oldName);
+        if (poster == null) {
             error(I.t("This map does not exist."));
             return;
         }
-        map.rename(argList.get(1));
+        String newName = arguments.get(1);
+        poster.rename(newName);
     }
 
     @Override
     protected List<String> complete() throws CommandException {
-
         if (args.length == 1) {
-            return getMatchingMapNames(playerSender(), args[0]);
+            return getMatchingPosterNames(playerSender(), args[0]);
         }
         return null;
     }

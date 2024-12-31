@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -38,7 +38,7 @@ package fr.moribus.imageonmap.map;
 
 import fr.moribus.imageonmap.ImageOnMap;
 import fr.moribus.imageonmap.PluginConfiguration;
-import fr.moribus.imageonmap.map.MapManagerException.Reason;
+import fr.moribus.imageonmap.map.PosterManagerException.Reason;
 import fr.zcraft.quartzlib.tools.PluginLogger;
 import java.io.File;
 import java.io.IOException;
@@ -54,126 +54,116 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
-public class PlayerMapStore implements ConfigurationSerializable {
+public class PlayerPosterStore implements ConfigurationSerializable {
     private final UUID playerUUID;
-    private final ArrayList<ImageMap> mapList = new ArrayList<ImageMap>();
+    private final ArrayList<ImagePoster> posterList = new ArrayList<>();
     private boolean modified = false;
-    private int mapCount = 0;
-    private FileConfiguration mapConfig = null;
-    private File mapsFile = null;
+    private int posterCount = 0;
+    private FileConfiguration posterConfig = null;
+    private File postersFile = null;
 
-    public PlayerMapStore(UUID playerUUID) {
+    public PlayerPosterStore(UUID playerUUID) {
         this.playerUUID = playerUUID;
     }
 
-    public synchronized boolean managesMap(int mapID) {
-        for (ImageMap map : mapList) {
-            if (map.managesMap(mapID)) {
+    //TODO maybe usefull to merge with the other manages poster
+    public synchronized boolean managesPoster(int posterID) {
+        for (ImagePoster poster : posterList) {
+            if (poster.managesPoster(posterID)) {
                 return true;
             }
         }
         return false;
     }
 
-    public synchronized boolean managesMap(ItemStack item) {
+    public synchronized boolean managesPoster(ItemStack item) {
         if (item == null) {
             return false;
         }
         if (item.getType() != Material.FILLED_MAP) {
             return false;
         }
-
-        for (ImageMap map : mapList) {
-            if (map.managesMap(item)) {
-                return true;
-            }
-        }
-        return false;
+        return managesPoster(PosterManager.getPosterIDFromItemStack(item));
     }
 
-    public synchronized void addMap(ImageMap map) throws MapManagerException {
-        checkMapLimit(map);
-        insertMap(map);
+    public synchronized void addPoster(ImagePoster poster) throws PosterManagerException {
+        checkPosterLimit(poster);
+        insertPoster(poster);
     }
 
-    public synchronized void insertMap(ImageMap map) {
-        add_Map(map);
+    public synchronized void insertPoster(ImagePoster poster) {
+        add_Poster(poster);
         notifyModification();
     }
 
-    private void add_Map(ImageMap map) {
-        mapList.add(map);
-        mapCount += map.getMapCount();
+    private void add_Poster(ImagePoster poster) {
+        posterList.add(poster);
+        posterCount += poster.getPosterCount();
     }
 
-    public synchronized void deleteMap(ImageMap map) throws MapManagerException {
-        remove_Map(map);
+    public synchronized void deletePoster(ImagePoster poster) throws PosterManagerException {
+        delete_Poster(poster);
         notifyModification();
     }
 
-    private void remove_Map(ImageMap map) throws MapManagerException {
-        if (!mapList.remove(map)) {
-            throw new MapManagerException(Reason.IMAGEMAP_DOES_NOT_EXIST);
+    private void delete_Poster(ImagePoster poster) throws PosterManagerException {
+        if (!posterList.remove(poster)) {
+            throw new PosterManagerException(Reason.IMAGEPOSTER_DOES_NOT_EXIST);
         }
-        mapCount -= map.getMapCount();
+        posterCount -= poster.getPosterCount();
     }
 
-    public synchronized boolean mapExists(String id) {
-        for (ImageMap map : mapList) {
-            if (map.getId().equals(id)) {
-                return true;
-            }
-        }
-
-        return false;
+    public synchronized boolean posterExists(String posterId) {
+        return getPoster(posterId) != null;
     }
 
-    public String getNextAvailableMapID(String mapId) {
-        if (!mapExists(mapId)) {
-            return mapId;
+    public String getNextAvailablePosterID(String posterId) {
+        //TODO check if the value is always greater than the id count
+        if (!posterExists(posterId)) {
+            return posterId;
         }
         int id = 0;
-
         do {
             id++;
-        } while (mapExists(mapId + "-" + id));
+        } while (posterExists(posterId + "-" + id));
 
-        return mapId + "-" + id;
+        return posterId + "-" + id;
     }
 
-    public synchronized List<ImageMap> getMapList() {
-        return new ArrayList(mapList);
+    public synchronized List<ImagePoster> getPosterList() {
+        return new ArrayList<>(posterList);
     }
 
-    public synchronized ImageMap[] getMaps() {
-        return mapList.toArray(new ImageMap[mapList.size()]);
+    //TODO refactor to arraylist instead of an array
+    public synchronized ImagePoster[] getPosters() {
+        return posterList.toArray(new ImagePoster[0]);
     }
 
-    public synchronized ImageMap getMap(String mapId) {
-        for (ImageMap map : mapList) {
-            if (map.getId().equals(mapId)) {
-                return map;
+    public synchronized ImagePoster getPoster(String posterId) {
+        for (ImagePoster poster : posterList) {
+            if (poster.getId().equals(posterId)) {
+                return poster;
             }
         }
-
         return null;
     }
 
     /* ===== Getters & Setters ===== */
 
-    public void checkMapLimit(ImageMap map) throws MapManagerException {
-        checkMapLimit(map.getMapCount());
+    public void checkPosterLimit(ImagePoster poster) throws PosterManagerException {
+        checkPosterLimit(poster.getPosterCount());
     }
 
-    public void checkMapLimit(int newMapsCount) throws MapManagerException {
-        int limit = PluginConfiguration.MAP_PLAYER_LIMIT.get();
+    public void checkPosterLimit(int newPostersCount) throws PosterManagerException {
+        int limit = PluginConfiguration.POSTER_PLAYER_LIMIT.get();
         if (limit <= 0) {
             return;
         }
 
-        if (getMapCount() + newMapsCount > limit) {
-            throw new MapManagerException(Reason.MAXIMUM_PLAYER_MAPS_EXCEEDED, limit);
+        if (getPosterCount() + newPostersCount > limit) {
+            throw new PosterManagerException(Reason.MAXIMUM_PLAYER_POSTERS_EXCEEDED, limit);
         }
     }
 
@@ -191,26 +181,26 @@ public class PlayerMapStore implements ConfigurationSerializable {
 
     /* ****** Serializing ***** */
 
-    public synchronized int getMapCount() {
-        return this.mapCount;
+    public synchronized int getPosterCount() {
+        return this.posterCount;
     }
 
     public synchronized int getImagesCount() {
-        return this.mapList.size();
+        return this.posterList.size();
     }
 
     /* ****** Configuration Files management ***** */
 
     @Override
-    public Map<String, Object> serialize() {
-        Map<String, Object> map = new HashMap<String, Object>();
-        ArrayList<Map> list = new ArrayList<Map>();
+    public @NotNull Map<String, Object> serialize() {
+        Map<String, Object> map = new HashMap<>();
+        ArrayList<Map> list = new ArrayList<>();
         synchronized (this) {
-            for (ImageMap tmpMap : mapList) {
-                list.add(tmpMap.serialize());
+            for (ImagePoster tmpPoster : posterList) {
+                list.add(tmpPoster.serialize());
             }
         }
-        map.put("mapList", list);
+        map.put("posterList", list);
         return map;
     }
 
@@ -218,16 +208,16 @@ public class PlayerMapStore implements ConfigurationSerializable {
         if (section == null) {
             return;
         }
-        List<Map<String, Object>> list = (List<Map<String, Object>>) section.getList("mapList");
+        List<Map<String, Object>> list = (List<Map<String, Object>>) section.getList("posterList");
         if (list == null) {
             return;
         }
 
         for (Map<String, Object> tmpMap : list) {
             try {
-                ImageMap newMap = ImageMap.fromConfig(tmpMap, playerUUID);
+                ImagePoster newPoster = ImagePoster.fromConfig(tmpMap, playerUUID);
                 synchronized (this) {
-                    add_Map(newMap);
+                    add_Poster(newPoster);
                 }
             } catch (InvalidConfigurationException ex) {
                 PluginLogger.warning("Could not load map data : ", ex);
@@ -235,39 +225,39 @@ public class PlayerMapStore implements ConfigurationSerializable {
         }
 
         try {
-            checkMapLimit(0);
-        } catch (MapManagerException ex) {
+            checkPosterLimit(0);
+        } catch (PosterManagerException ex) {
             PluginLogger.warning("Map limit exceeded for player {0} ({1} maps loaded)",
-                    playerUUID.toString(), mapList.size());
+                    playerUUID.toString(), posterList.size());
         }
     }
 
     public FileConfiguration getToolConfig() {
-        if (mapConfig == null) {
+        if (posterConfig == null) {
             load();
         }
 
-        return mapConfig;
+        return posterConfig;
     }
 
     public void load() {
-        if (mapsFile == null) {
-            mapsFile = new File(ImageOnMap.getPlugin().getMapsDirectory(), playerUUID.toString() + ".yml");
-            if (!mapsFile.exists()) {
+        if (postersFile == null) {
+            postersFile = new File(ImageOnMap.getPlugin().getPostersDirectory(), playerUUID.toString() + ".yml");
+            if (!postersFile.exists()) {
                 save();
             }
         }
-        mapConfig = YamlConfiguration.loadConfiguration(mapsFile);
-        loadFromConfig(getToolConfig().getConfigurationSection("PlayerMapStore"));
+        posterConfig = YamlConfiguration.loadConfiguration(postersFile);
+        loadFromConfig(getToolConfig().getConfigurationSection("playerPosterStore"));
     }
 
     public void save() {
-        if (mapsFile == null || mapConfig == null) {
+        if (postersFile == null || posterConfig == null) {
             return;
         }
-        getToolConfig().set("PlayerMapStore", this.serialize());
+        getToolConfig().set("playerPosterStore", this.serialize());
         try {
-            getToolConfig().save(mapsFile);
+            getToolConfig().save(postersFile);
 
         } catch (IOException ex) {
             PluginLogger.error("Could not save maps file for player '{0}'", ex, playerUUID.toString());

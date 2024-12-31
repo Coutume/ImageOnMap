@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -43,14 +43,16 @@ import fr.moribus.imageonmap.commands.maptool.GetCommand;
 import fr.moribus.imageonmap.commands.maptool.GetRemainingCommand;
 import fr.moribus.imageonmap.commands.maptool.GiveCommand;
 import fr.moribus.imageonmap.commands.maptool.ListCommand;
+import fr.moribus.imageonmap.commands.maptool.MigrateCommand;
 import fr.moribus.imageonmap.commands.maptool.NewCommand;
+import fr.moribus.imageonmap.commands.maptool.RemotePlacingCommand;
 import fr.moribus.imageonmap.commands.maptool.RenameCommand;
 import fr.moribus.imageonmap.commands.maptool.UpdateCommand;
 import fr.moribus.imageonmap.image.ImageIOExecutor;
 import fr.moribus.imageonmap.image.ImageRendererExecutor;
-import fr.moribus.imageonmap.image.MapInitEvent;
-import fr.moribus.imageonmap.map.MapManager;
-import fr.moribus.imageonmap.ui.MapItemManager;
+import fr.moribus.imageonmap.image.PosterInitEvent;
+import fr.moribus.imageonmap.map.PosterManager;
+import fr.moribus.imageonmap.ui.PosterItemManager;
 import fr.zcraft.quartzlib.components.commands.CommandWorkers;
 import fr.zcraft.quartzlib.components.commands.Commands;
 import fr.zcraft.quartzlib.components.gui.Gui;
@@ -60,19 +62,48 @@ import fr.zcraft.quartzlib.tools.PluginLogger;
 import fr.zcraft.quartzlib.tools.UpdateChecker;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.bstats.bukkit.Metrics;
 
+//TODO ERROR when loading plugin org.bukkit.plugin.InvalidPluginException: java.lang.NoClassDefFoundError:
+// fr/zcraft/imageonmap/quartzlib/core/QuartzPlugin
+//TODO list: bug sur supprimer map si coin manquant, passer en position au lieu de frame;
+// repair fonction permet avec la carte en main si clic droit de réparer (permission);
+// replace IG si clic droit alors remplacer le dessin si meme taille sinon mettre un message erreur;
+// bug: pas de message d'erreur si pas assez de place;
+// finir déploiement plus efficace des cartes;
+// bug rotation des frames au sol et plafond (faire un fix mieux que juste mettre x rotation);
+// continuer rework des commandes;
+// GUI permettre de changer objets utilisés et ajouter ressource pack;
+// rework des GUI (map part utile ???);
+// Pouvoir déployer carte à distance;
+// carte interractive (5.1?);
+// glow effect a refaire (vraiment utile ???);
+// Miniature des maps en 1x1 (migration?);
+// ecrire directement sur les cartes pour ne pas tout perdre(migration);
+// bug: suppression image chat (inconnue ?) laisse item frame invisible;
+// passer invisibiliter et glow dans le GUI si permission
+// avec un clic droit sur les frames et fenetre en verre pour la protection contre le grief des mobs et potion
+// invisibilité pour rendre frame invisible (peut etre que l'item utilisé pour le craft); proposer craft RP des cartes
+// soit avec un item map vide+ un item de peintre ? soit avec un atelier?
+// soit avec certains objets simple dans inventaire
 public final class ImageOnMap extends QuartzPlugin {
+
     private static final String IMAGES_DIRECTORY_NAME = "images";
-    private static final String MAPS_DIRECTORY_NAME = "maps";
+    private static final String RENDERS_DIRECTORY_NAME = "renders";
+    private static final String POSTERS_DIRECTORY_NAME = "maps";
     private static ImageOnMap plugin;
-    private final File mapsDirectory;
     private File imagesDirectory;
+
+    private File rendersDirectory;
+    private File postersDirectory;
     private CommandWorkers commandWorker;
 
     public ImageOnMap() {
         imagesDirectory = new File(this.getDataFolder(), IMAGES_DIRECTORY_NAME);
-        mapsDirectory = new File(this.getDataFolder(), MAPS_DIRECTORY_NAME);
+        rendersDirectory = new File(this.getDataFolder(), RENDERS_DIRECTORY_NAME);
+        postersDirectory = new File(this.getDataFolder(), POSTERS_DIRECTORY_NAME);
         plugin = this;
     }
 
@@ -84,32 +115,48 @@ public final class ImageOnMap extends QuartzPlugin {
         return imagesDirectory;
     }
 
-    public File getMapsDirectory() {
-        return mapsDirectory;
+    public File getRendersDirectory() {
+        return rendersDirectory;
     }
 
-    public File getImageFile(int mapID) {
-        return new File(imagesDirectory, "map" + mapID + ".png");
+    public File getPostersDirectory() {
+        return postersDirectory;
+    }
+
+    public File getImageFile(int posterID) {
+        return new File(imagesDirectory, "map" + posterID + ".png");
+    }
+
+    public File getRenderFile(int posterID) {
+        return new File(rendersDirectory, "render" + posterID + ".png");
     }
 
     public CommandWorkers getCommandWorker() {
         return commandWorker;
     }
 
-    @SuppressWarnings("unchecked")
+    private Map<String, File> checkDirs() throws IOException {
+        Map<String, File> dirs = new HashMap<>();
+        dirs.put("mapsDirectory", checkPluginDirectory(postersDirectory));
+        dirs.put("rendersDirectory", checkPluginDirectory(rendersDirectory));
+        dirs.put("imagesDirectory", checkPluginDirectory(imagesDirectory));
+        return dirs;
+    }
+
     @Override
     public void onEnable() {
         // Creating the images and maps directories if necessary
         try {
-            //imagesDirectory = checkPluginDirectory(imagesDirectory, V3Migrator.getOldImagesDirectory(this));
-            checkPluginDirectory(mapsDirectory);
-            checkPluginDirectory(imagesDirectory);
+            Map<String, File> directories = checkDirs();
+            postersDirectory = directories.get("mapsDirectory");
+            rendersDirectory = directories.get("rendersDirectory");
+            imagesDirectory = directories.get("imagesDirectory");
         } catch (final IOException ex) {
             PluginLogger.error("FATAL: " + ex.getMessage());
+            //disable the plugin
             this.setEnabled(false);
             return;
         }
-
 
         saveDefaultConfig();
         commandWorker = loadComponent(CommandWorkers.class);
@@ -119,13 +166,13 @@ public final class ImageOnMap extends QuartzPlugin {
         //Init all the things !
         I18n.setPrimaryLocale(PluginConfiguration.LANG.get());
 
-        MapManager.init();
-        MapInitEvent.init();
-        MapItemManager.init();
+        PosterManager.init();
+        PosterInitEvent.init();
+        PosterItemManager.init();
 
-
+        String commandGroupName = "maptool";
         Commands.register(
-                "maptool",
+                commandGroupName,
                 NewCommand.class,
                 ListCommand.class,
                 GetCommand.class,
@@ -134,22 +181,24 @@ public final class ImageOnMap extends QuartzPlugin {
                 GiveCommand.class,
                 GetRemainingCommand.class,
                 ExploreCommand.class,
-                //MigrateCommand.class,//Removed for now doesn't work nor is useful, maybe useful later on
-                UpdateCommand.class
+                MigrateCommand.class,
+                UpdateCommand.class,
+                RemotePlacingCommand.class
         );
 
-        Commands.registerShortcut("maptool", NewCommand.class, "tomap");
-        Commands.registerShortcut("maptool", ExploreCommand.class, "maps");
-        Commands.registerShortcut("maptool", GiveCommand.class, "givemap");
+        Commands.registerShortcut(commandGroupName, NewCommand.class, "tomap");
+        Commands.registerShortcut(commandGroupName, ExploreCommand.class, "maps");
+        Commands.registerShortcut(commandGroupName, GiveCommand.class, "givemap");
+        Commands.registerShortcut(commandGroupName, RemotePlacingCommand.class, "placemap");
 
         if (PluginConfiguration.CHECK_FOR_UPDATES.get()) {
             UpdateChecker.boot("imageonmap.26585");
         }
 
         if (PluginConfiguration.COLLECT_DATA.get()) {
-            final Metrics metrics = new Metrics(this,5920);
-            metrics.addCustomChart(new Metrics.SingleLineChart("rendered-images", MapManager::getImagesCount));
-            metrics.addCustomChart(new Metrics.SingleLineChart("used-minecraft-maps", MapManager::getMapCount));
+            final Metrics metrics = new Metrics(this, 5920);
+            metrics.addCustomChart(new Metrics.SingleLineChart("rendered-images", PosterManager::getImagesCount));
+            metrics.addCustomChart(new Metrics.SingleLineChart("used-minecraft-maps", PosterManager::getPosterCount));
         } else {
             PluginLogger.warning("Collect data disabled");
         }
@@ -157,8 +206,8 @@ public final class ImageOnMap extends QuartzPlugin {
 
     @Override
     public void onDisable() {
-        MapManager.exit();
-        MapItemManager.exit();
+        PosterManager.exit();
+        PosterItemManager.exit();
         //MigratorExecutor.waitForMigration();//Removed for now doesn't work nor is useful, maybe useful later on
 
         super.onDisable();

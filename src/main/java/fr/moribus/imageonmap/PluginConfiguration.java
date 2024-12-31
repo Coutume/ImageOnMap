@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -46,22 +46,24 @@ import java.util.Locale;
 
 
 public final class PluginConfiguration extends Configuration {
-    public static ConfigurationItem<Locale> LANG = item("lang", Locale.class);
+    public static final ConfigurationItem<Locale> LANG = item("lang", Locale.class);
 
-    public static ConfigurationItem<Boolean> COLLECT_DATA = item("collect-data", true);
+    public static final ConfigurationItem<Boolean> COLLECT_DATA = item("collect-data", true);
 
-    public static ConfigurationItem<Boolean> CHECK_FOR_UPDATES = item("check-for-updates", true);
+    public static final ConfigurationItem<Boolean> CHECK_FOR_UPDATES = item("check-for-updates", true);
 
-    public static ConfigurationItem<Integer> MAP_GLOBAL_LIMIT = item("map-global-limit", 0, "Limit-map-by-server");
-    public static ConfigurationItem<Integer> MAP_PLAYER_LIMIT = item("map-player-limit", 0, "Limit-map-by-player");
+    public static final ConfigurationItem<Integer> POSTER_GLOBAL_LIMIT =
+            item("map-global-limit", 0, "Limit-map-by-server");
+    public static final ConfigurationItem<Integer> POSTER_PLAYER_LIMIT =
+            item("map-player-limit", 0, "Limit-map-by-player");
 
-    public static ConfigurationItem<Boolean> SAVE_FULL_IMAGE = item("save-full-image", true);
+    public static final ConfigurationItem<Boolean> SAVE_FULL_IMAGE = item("save-full-image", true);
 
 
-    public static ConfigurationItem<Integer> LIMIT_SIZE_X = item("limit-map-size-x", 0);
-    public static ConfigurationItem<Integer> LIMIT_SIZE_Y = item("limit-map-size-y", 0);
+    public static final ConfigurationItem<Integer> LIMIT_SIZE_X = item("limit-map-size-x", 0);
+    public static final ConfigurationItem<Integer> LIMIT_SIZE_Y = item("limit-map-size-y", 0);
 
-    public static ConfigurationList<String> IMAGES_HOSTNAMES_WHITELIST =
+    public static final ConfigurationList<String> IMAGES_HOSTNAMES_WHITELIST =
             list("images-hostnames-whitelist", String.class);
 
 }

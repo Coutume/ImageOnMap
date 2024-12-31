@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -37,8 +37,8 @@
 package fr.moribus.imageonmap.commands;
 
 import fr.moribus.imageonmap.PluginConfiguration;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.commands.Command;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.i18n.I;
@@ -46,14 +46,36 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 
 public abstract class IoMCommand extends Command {
+    protected UUID getPlayerUUID(String playerName) {
+        return Bukkit.getOfflinePlayer(playerName).getUniqueId();
+        //TODO replace with homemade solution using https://api.mojang.com/users/profiles/minecraft/
+    }
+
+    private boolean checkTooArguments(boolean bool, String msg) throws CommandException {
+        if (bool) {
+            throwInvalidArgument(msg);
+        }
+        return bool;
+    }
+
+    protected boolean checkTooManyArguments(boolean bool) throws CommandException {
+        return checkTooArguments(bool, I.t("Too many parameters!"));
+    }
+
+    protected boolean checkTooFewArguments(boolean bool) throws CommandException {
+        return checkTooArguments(bool, I.t("Too few parameters!"));
+    }
+
+    protected boolean checkArguments(boolean bool1, boolean bool2) throws CommandException {
+        //TODO WTF is happening here
+        return !(checkTooManyArguments(bool1) || checkTooFewArguments(bool2));
+    }
 
     protected boolean checkHostnameWhitelist(final URL url) {
         final List<String> hostnames = PluginConfiguration.IMAGES_HOSTNAMES_WHITELIST.get()
@@ -70,39 +92,6 @@ public abstract class IoMCommand extends Command {
                 .stream()
                 .map(h -> h.replaceAll("https://", "").replaceAll("http://", ""))
                 .anyMatch(h -> h.equalsIgnoreCase(url.getHost()));
-    }
-
-    protected void retrieveUUID(final String arg, final Consumer<UUID> consumer) {
-        // If it is being removed we may have to use Mojang services
-        consumer.accept(Bukkit.getOfflinePlayer(arg).getUniqueId());
-    }
-
-    protected ImageMap getMapFromArgs() throws CommandException {
-        return getMapFromArgs(playerSender(), 0, true);
-    }
-
-    protected ImageMap getMapFromArgs(final Player player, final int index, boolean expand) throws CommandException {
-        if (args.length <= index) {
-            throwInvalidArgument(I.t("You need to give a map name."));
-        }
-
-        ImageMap map;
-        String mapName = args[index];
-
-        if (expand) {
-            for (int i = index + 1, c = args.length; i < c; i++) {
-                mapName += " " + args[i];
-            }
-        }
-
-        mapName = mapName.trim();
-        map = MapManager.getMap(player.getUniqueId(), mapName);
-
-        if (map == null) {
-            error(I.t("This map does not exist."));
-        }
-
-        return map;
     }
 
     protected ArrayList<String> getArgs() {
@@ -160,19 +149,20 @@ public abstract class IoMCommand extends Command {
     }
 
 
-    protected List<String> getMatchingMapNames(Player player, String prefix) {
-        return getMatchingMapNames(MapManager.getMapList(player.getUniqueId()), prefix);
+    protected List<String> getMatchingPosterNames(Player player, String prefix) {
+        return getMatchingPosterNames(PosterManager.getPosterList(player.getUniqueId()), prefix);
     }
 
-    protected List<String> getMatchingMapNames(Iterable<? extends ImageMap> maps, String prefix) {
+    protected List<String> getMatchingPosterNames(Iterable<? extends ImagePoster> posters, String prefix) {
         List<String> matches = new ArrayList<>();
 
-        for (ImageMap map : maps) {
-            if (map.getId().startsWith(prefix)) {
-                matches.add(map.getId());
+        for (ImagePoster poster : posters) {
+            if (poster.getId().startsWith(prefix)) {
+                matches.add(poster.getId());
             }
         }
 
         return matches;
     }
+
 }

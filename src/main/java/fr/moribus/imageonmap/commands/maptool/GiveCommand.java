@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,88 +36,128 @@
 
 package fr.moribus.imageonmap.commands.maptool;
 
+import fr.moribus.imageonmap.Argument;
 import fr.moribus.imageonmap.Permissions;
+import fr.moribus.imageonmap.Status;
+import fr.moribus.imageonmap.Type;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterManager;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.i18n.I;
+import fr.zcraft.quartzlib.tools.PluginLogger;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 
-@CommandInfo(name = "give", usageParameters = "<player name> [playerFrom]:<map name>")
+@CommandInfo(name = "give", usageParameters = "<player name> [playerFrom]:<map name> [quantity]")
 public class GiveCommand extends IoMCommand {
+    protected List<Argument> commandPrototype() {
+        Argument target = new Argument("target", Type.STRING, Status.MANDATORY);
+        Argument from = new Argument("from", Type.STRING, Status.OPTIONAL_FOR_PLAYER_ONLY);
+        Argument posterName = new Argument("posterName", Type.STRING, Status.MANDATORY);
+        Argument quantity = new Argument("quantity", Type.INT, Status.OPTIONAL, "1");
+
+        List<Argument> list = new ArrayList<>();
+        list.add(target);
+        list.add(from);
+        list.add(posterName);
+        list.add(quantity);
+
+        return list;
+    }
+    // /givemap Vlammar "Carte 1" 10
+    // /maptool give Vlammar Vlammar:"Carte"
 
     @Override
     protected void run() throws CommandException {
 
-        if (args.length < 2) {
-            throwInvalidArgument(I.t("You must give a valid player name and a map name."));
-            return;
-        }
-
+        List<Argument> cmdProto = commandPrototype();
         ArrayList<String> arguments = getArgs();
-
-        if (arguments.size() > 3) {
-            throwInvalidArgument(I.t("Too many parameters!"));
-            return;
-        }
-        if (arguments.size() < 1) {
-            throwInvalidArgument(I.t("Too few parameters!"));
-            return;
-        }
-        final String mapName;
+        boolean isPlayer = sender != null;
+        final String posterName;
         final String from;
         final String playerName;
+        final int quantity;
+        try {
+            Map<String, Argument> argMap = Argument.parseArguments(cmdProto, arguments, isPlayer);
+            posterName = argMap.get("posterName").getContent();
+            from = argMap.get("from").getContent();
+            playerName = argMap.get("target").getContent();
+            quantity = argMap.get("quantity").getContent();
+        } catch (Exception e) {
+            PluginLogger.error("Error while parsing command");
+            return;
+        }
+
+
+        boolean isTooMany = arguments.size() > 4;
+        boolean isTooFew = arguments.size() < 2;
+        if (!checkArguments(isTooMany, isTooFew)) {
+            return;
+        }
+
+        /*
+        final String posterName = Argument.findContent("posterName", args);
+        final String from = Argument.findContent("from", args);
+        final String playerName = Argument.findContent("target", args);
+        final int quantity = Argument.findContent("quantity", args);
+        */
+        PluginLogger.info("quantity {0}", quantity);
+        if (posterName == null || from == null || playerName == null) {
+            PluginLogger.error("Error one argument is null, check argument names");
+            return;
+        }
         final Player playerSender;
         Player playerSender1;
         try {
             playerSender1 = playerSender();
         } catch (CommandException ignored) {
             if (arguments.size() == 2) {
-                throwInvalidArgument(I.t("Player name is required from the console"));
+                throwInvalidArgument(I.t("Player name is required for the console"));
             }
             playerSender1 = null;
         }
         playerSender = playerSender1;
-        if (arguments.size() == 2) {
+        /*if (arguments.size() == 2) {
             from = playerSender.getName();
             playerName = arguments.get(0);
-            mapName = arguments.get(1);
+            posterName = arguments.get(1);
         } else {
             if (arguments.size() == 3) {
                 from = arguments.get(1);
                 playerName = arguments.get(0);
-                mapName = arguments.get(2);
+                posterName = arguments.get(2);
             } else {
                 from = "";
                 playerName = "";
-                mapName = "";
+                posterName = "";
             }
-        }
+        }*/
 
         final Player sender = playerSender();
+        UUID uuid = getPlayerUUID(from);
+        UUID uuid2 = getPlayerUUID(playerName);
 
-        retrieveUUID(from, uuid -> {
-            final ImageMap map = MapManager.getMap(uuid, mapName);
+        final ImagePoster poster = PosterManager.getPoster(uuid, posterName);
 
-            if (map == null) {
-                warning(sender, I.t("This map does not exist."));
-                return;
-            }
+        if (poster == null) {
+            warning(sender, I.t("This map does not exist."));
+            return;
+        }
 
-            retrieveUUID(playerName, uuid2 -> {
-                if (Bukkit.getPlayer((uuid2)) != null && Bukkit.getPlayer((uuid2)).isOnline()
-                        && map.give(Bukkit.getPlayer(uuid2))) {
-                    info(I.t("The requested map was too big to fit in your inventory."));
-                    info(I.t("Use '/maptool getremaining' to get the remaining maps."));
-                }
-            });
-        });
+
+        if (Bukkit.getPlayer((uuid2)) != null && Bukkit.getPlayer((uuid2)).isOnline()
+                && poster.give(Bukkit.getPlayer(uuid2), quantity)) {
+            info(I.t("The requested map was too big to fit in your inventory."));
+            info(I.t("Use '/maptool getremaining' to get the remaining maps."));
+        }
 
     }
 

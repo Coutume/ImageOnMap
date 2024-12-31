@@ -1,8 +1,8 @@
 /*
  * Copyright or © or Copr. Moribus (2013)
  * Copyright or © or Copr. ProkopyL <prokopylmc@gmail.com> (2015)
- * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2021)
- * Copyright or © or Copr. Vlammar <valentin.jabre@gmail.com> (2019 – 2021)
+ * Copyright or © or Copr. Amaury Carrade <amaury@carrade.eu> (2016 – 2022)
+ * Copyright or © or Copr. Vlammar <anais.jabre@gmail.com> (2019 – 2024)
  *
  * This software is a computer program whose purpose is to allow insertion of
  * custom images in a Minecraft world.
@@ -36,15 +36,19 @@
 
 package fr.moribus.imageonmap.image;
 
+
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.PluginConfiguration;
-import fr.moribus.imageonmap.map.ImageMap;
-import fr.moribus.imageonmap.map.MapManager;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PosterData;
+import fr.moribus.imageonmap.map.PosterManager;
+import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.components.worker.Worker;
 import fr.zcraft.quartzlib.components.worker.WorkerAttributes;
 import fr.zcraft.quartzlib.components.worker.WorkerCallback;
 import fr.zcraft.quartzlib.components.worker.WorkerRunnable;
+import fr.zcraft.quartzlib.tools.PluginLogger;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,10 +59,52 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import javax.imageio.ImageIO;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
 
 @WorkerAttributes(name = "Image Renderer", queriesMainThread = true)
 public class ImageRendererExecutor extends Worker {
+    public static void renderAndNotify(final URL url, final ImageUtils.ScalingType scaling, final UUID playerUUID,
+                                       final int width, final int height) {
+        final Player player = Bukkit.getPlayer(playerUUID);
+        if (player == null) {
+            return;
+        }
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(I.t("&1 Rendering...")));
+
+        render(url, scaling, player.getUniqueId(), width, height, new WorkerCallback<ImagePoster>() {
+            @Override
+            public void finished(ImagePoster result) {
+                String message = I.t("&1 Rendering finished!");
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
+
+                if (result.give(player) && (result instanceof PosterMap && !((PosterMap) result).hasColumnData())) {
+                    player.spigot().sendMessage(ChatMessageType.CHAT,
+                            new TextComponent(I.t("&7 The rendered map was too big to fit in your inventory.")));
+                    player.spigot().sendMessage(ChatMessageType.CHAT,
+                            new TextComponent(I.t("&7 Use '/maptool getremaining' to get the remaining maps.")));
+                }
+            }
+
+            @Override
+            public void errored(Throwable exception) {
+                String message = I.t("&C Map rendering failed: {0}", exception.getMessage());
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.CHAT, text);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
+
+                PluginLogger.warning("Rendering from {0} failed: {1}: {2}",
+                        player.getName(),
+                        exception.getClass().getCanonicalName(),
+                        exception.getMessage());
+            }
+        });
+    }
+
     private static URLConnection connecting(URL url) throws IOException {
         final URLConnection connection = url.openConnection();
         connection.addRequestProperty("User-Agent",
@@ -91,11 +137,18 @@ public class ImageRendererExecutor extends Worker {
         }
     }
 
+    public static void render(final PosterData posterData, final UUID playerUUID,
+                              WorkerCallback<ImagePoster> callback) {
+        render(posterData.getURL(), posterData.getScaling(), playerUUID, posterData.getWidth(), posterData.getHeight(),
+                callback);
+    }
+
     public static void render(final URL url, final ImageUtils.ScalingType scaling, final UUID playerUUID,
-                              final int width, final int height, WorkerCallback<ImageMap> callback) {
-        submitQuery(new WorkerRunnable<ImageMap>() {
+                              final int width, final int height, WorkerCallback<ImagePoster> callback) {
+        submitQuery(new WorkerRunnable<ImagePoster>() {
+
             @Override
-            public ImageMap run() throws Throwable {
+            public ImagePoster run() throws Throwable {
 
                 BufferedImage image = null;
 
@@ -144,25 +197,22 @@ public class ImageRendererExecutor extends Worker {
                 }
                 // Limits are in place and the player does NOT have rights to avoid them.
                 checkSizeLimit(playerUUID, image);
-                if (scaling != ImageUtils.ScalingType.NONE && height <= 1 && width <= 1) {
-                    ImageMap ret = renderSingle(scaling.resize(image, ImageMap.WIDTH, ImageMap.HEIGHT), playerUUID);
-                    image.flush();//Safe to free
-                    return ret;
-                }
-                final BufferedImage resizedImage =
-                        scaling.resize(image, ImageMap.WIDTH * width, ImageMap.HEIGHT * height);
+                final BufferedImage resizedImage;
+
+                resizedImage = scaling.resize(image, ImagePoster.WIDTH * width, ImagePoster.HEIGHT * height);
                 image.flush();//Safe to free
+
                 return renderPoster(resizedImage, playerUUID);
             }
         }, callback);
     }
 
     public static void update(final URL url, final ImageUtils.ScalingType scaling, final UUID playerUUID,
-                              final ImageMap map, final int width, final int height,
-                              WorkerCallback<ImageMap> callback) {
-        submitQuery(new WorkerRunnable<ImageMap>() {
+                              final ImagePoster poster, final int width, final int height,
+                              WorkerCallback<ImagePoster> callback) {
+        submitQuery(new WorkerRunnable<ImagePoster>() {
             @Override
-            public ImageMap run() throws Throwable {
+            public ImagePoster run() throws Throwable {
                 final URLConnection connection = connecting(url);
 
                 final InputStream stream = connection.getInputStream();
@@ -176,85 +226,68 @@ public class ImageRendererExecutor extends Worker {
                 // Limits are in place and the player does NOT have rights to avoid them.
                 checkSizeLimit(playerUUID, image);
 
-                updateMap(scaling.resize(image, width * 128, height * 128), playerUUID, map.getMapsIDs());
-                return map;
+                updatePoster(scaling.resize(image, width * 128, height * 128),
+                        playerUUID, poster.getPostersIDs());
+                return poster;
 
             }
         }, callback);
 
     }
 
-    private static void updateMap(final BufferedImage image, final UUID playerUUID, int[] mapsIDs) throws Throwable {
+    private static void updatePoster(final BufferedImage image, final UUID playerUUID, int[] postersIDs)
+            throws Throwable {
 
         final PosterImage poster = new PosterImage(image);
         poster.splitImages();
 
-        ImageIOExecutor.saveImage(mapsIDs, poster);
+        ImageIOExecutor.saveImage(postersIDs, poster);
 
         if (PluginConfiguration.SAVE_FULL_IMAGE.get()) {
-            ImageIOExecutor.saveImage(ImageMap.getFullImageFile(mapsIDs[0], mapsIDs[mapsIDs.length - 1]), image);
+            ImageIOExecutor.saveImage(ImagePoster.getFullImageFile(postersIDs[0], postersIDs[postersIDs.length - 1]),
+                    image);
         }
 
         submitToMainThread(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                Renderer.installRenderer(poster, mapsIDs);
+                Renderer.installRenderer(poster, postersIDs);
                 return null;
             }
         });
     }
 
-    private static ImageMap renderSingle(final BufferedImage image, final UUID playerUUID) throws Throwable {
-        MapManager.checkMapLimit(1, playerUUID);
-        final Future<Integer> futureMapID = submitToMainThread(new Callable<Integer>() {
-            @Override
-            public Integer call() throws Exception {
-                return MapManager.getNewMapsIds(1)[0];
-            }
-        });
-
-        final int mapID = futureMapID.get();
-        ImageIOExecutor.saveImage(mapID, image);
-        submitToMainThread(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                Renderer.installRenderer(image, mapID);
-                return null;
-            }
-        });
-        return MapManager.createMap(playerUUID, mapID);
-    }
-
-    private static ImageMap renderPoster(final BufferedImage image, final UUID playerUUID) throws Throwable {
+    private static ImagePoster renderPoster(final BufferedImage image, final UUID playerUUID) throws Throwable {
         final PosterImage poster = new PosterImage(image);
-        final int mapCount = poster.getImagesCount();
-        MapManager.checkMapLimit(mapCount, playerUUID);
-        final Future<int[]> futureMapsIds = submitToMainThread(new Callable<int[]>() {
+        final int posterCount = poster.getImagesCount();
+        PosterManager.checkPosterLimit(posterCount, playerUUID);
+        final Future<int[]> futurePostersIds = submitToMainThread(new Callable<int[]>() {
             @Override
             public int[] call() throws Exception {
-                return MapManager.getNewMapsIds(mapCount);
+                return PosterManager.getNewPostersIds(posterCount);
             }
         });
         poster.splitImages();
-        final int[] mapsIDs = futureMapsIds.get();
-        ImageIOExecutor.saveImage(mapsIDs, poster);
+        final int[] postersIDs = futurePostersIds.get();
+        ImageIOExecutor.saveImage(postersIDs, poster);
 
 
-        ImageIOExecutor.saveImage(mapsIDs, poster);
+        ImageIOExecutor.saveImage(postersIDs, poster);
         if (PluginConfiguration.SAVE_FULL_IMAGE.get()) {
-            ImageIOExecutor.saveImage(ImageMap.getFullImageFile(mapsIDs[0], mapsIDs[mapsIDs.length - 1]), image);
+            ImageIOExecutor.saveImage(ImagePoster.getFullImageFile(postersIDs[0], postersIDs[postersIDs.length - 1]),
+                    image);
         }
 
         submitToMainThread(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                Renderer.installRenderer(poster, mapsIDs);
+                Renderer.installRenderer(poster, postersIDs);
                 return null;
             }
 
         });
         poster.getImage().flush();//Safe to free
-        return MapManager.createMap(poster, playerUUID, mapsIDs);
+        return PosterManager.createPoster(poster, playerUUID, postersIDs);
     }
 
     private enum Extension {
