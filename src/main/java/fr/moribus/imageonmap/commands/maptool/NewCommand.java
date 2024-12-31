@@ -36,9 +36,11 @@
 
 package fr.moribus.imageonmap.commands.maptool;
 
+import fr.moribus.imageonmap.Argument;
 import fr.moribus.imageonmap.Permissions;
+import fr.moribus.imageonmap.Status;
+import fr.moribus.imageonmap.Type;
 import fr.moribus.imageonmap.commands.IoMCommand;
-import fr.moribus.imageonmap.gui.RenderGui;
 import fr.moribus.imageonmap.image.ImageRendererExecutor;
 import fr.moribus.imageonmap.image.ImageUtils;
 import fr.moribus.imageonmap.map.ImagePoster;
@@ -47,15 +49,15 @@ import fr.moribus.imageonmap.map.PosterManager;
 import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
-import fr.zcraft.quartzlib.components.gui.Gui;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.components.worker.WorkerCallback;
 import fr.zcraft.quartzlib.tools.PluginLogger;
-import fr.zcraft.quartzlib.tools.text.ActionBar;
-import fr.zcraft.quartzlib.tools.text.MessageSender;
-import java.net.MalformedURLException;
 import java.net.URL;
-import org.bukkit.ChatColor;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -126,64 +128,89 @@ public class NewCommand extends IoMCommand {
 
     @Override
     protected void run() throws CommandException {
-        //TODO check if not too many args
-        final Player player = playerSender();
-        if (args.length < 1) {
-            throwInvalidArgument(I.t("You must give an URL to take the image from."));
-        }
-        //Checking if the poster limit and image limit
-
-        imageLimitReached(player);
-        posterLimitReached(player);
-        PosterData posterData;
         try {
-            posterData = new PosterData(new URL(args[0]));
+            //TODO check if not too many args
+            final Player player = playerSender();
+            if (args.length < 1) {
+                throwInvalidArgument(I.t("You must give an URL to take the image from."));
+            }
+            //Checking if the poster limit and image limit
+
+            imageLimitReached(player);
+            posterLimitReached(player);
+            boolean isPlayer = sender != null;
+            ArrayList<String> arguments = getArgs();
+
+
+            List<Argument> prototype = new ArrayList<>();
+            prototype.add(new Argument("URL", Type.STRING, Status.MANDATORY));
+            Map<String, Argument> argMap = Argument.parseArguments(prototype, arguments, isPlayer);
+            for (String key : argMap.keySet()) {
+                Argument arg = argMap.get(key);
+                PluginLogger.info("Arguments : \n name " + arg.getName() + "\n type " + arg.getType()
+                        + "\n status " + arg.getStatus() + "\n arg content " + arg.getContent());
+            }
+
+            PluginLogger.info("qjksckhjkhqjskhjc quhshukchjkqs " + argMap.get("URL").getContent());
+            URL url = new URL(argMap.get("URL").getContent());
+            PosterData posterData = new PosterData(url);
+            posterData.setURL(url); //TODO WTF... the constructor doesn't work
+            PluginLogger.info("url qsjkh jsjc " + url);
+
+
             if (!Permissions.BYPASS_WHITELIST.grantedTo(player) && !checkHostnameWhitelist(posterData.getURL())) {
                 throwInvalidArgument(I.t("This hosting website is not trusted, if you think that this is an error "
                         + " contact your server administrator"));
                 return;
             }
 
-        } catch (MalformedURLException ex) {
-            throwInvalidArgument(I.t("Invalid URL."));
-            return;
-        }
-        boolean isPlayer = sender != null;
-        // TODO Add a per-player toggle for the GUI.
-        if (args.length < 2 && isPlayer) {
-            try {
-                ActionBar.sendPermanentMessage(player, ChatColor.DARK_GREEN + I.t("test..."));
-            } catch (Exception e) {
-                PluginLogger.info("Exception " + e);
-            }
-
-            //Gui.open(player, new RenderGui(posterData.getURL());
-            //ImageRendererExecutor.renderAndNotify(posterData.getURL(), scaling, player.getUniqueId(), width, height);
-        } else {
-            if (args.length >= 2) {
-                if (args.length >= 3) {
-                    try {
-                        posterData = parseSize(posterData);
-                    } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
-                        throwInvalidArgument(I.t("resize dimension as to be in format <n m> or <nxm> or <n*m>."));
-                        return;
-                    }
+            // TODO Add a per-player toggle for the GUI.
+            if (args.length < 2 && isPlayer) {
+                try {
+                    String message = I.t("&1 test...");
+                    PluginLogger.info("URL quuhqsjhkcjhk " + posterData.getURL());
+                    TextComponent text = new TextComponent(message);
+                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
+                    posterData.setHeight(0);
+                    posterData.setWidth(0);
+                    posterData.setScaling(ImageUtils.ScalingType.NONE);
+                } catch (Exception e) {
+                    PluginLogger.info("Exception " + e.getMessage());
                 }
-                posterData.setScaling(resizeMode());
-            }
-            if (posterData.getWidth() < 0 || posterData.getWidth() > 256
-                    || posterData.getHeight() < 0 || posterData.getHeight() > 256) {
-                throwInvalidArgument(I.t("You need to specify a valid size. e.g. resize 4 5"));
-                return;
+
+                //Gui.open(player, new RenderGui(posterData.getURL());
+                //ImageRendererExecutor.renderAndNotify(posterData.getURL(), posterData.getScaling(),
+                // player.getUniqueId(),
+                //posterData.getWidth(), posterData.getHeight());
+            } else {
+                if (args.length >= 2) {
+                    if (args.length >= 3) {
+                        try {
+                            posterData = parseSize(posterData);
+                        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                            throwInvalidArgument(
+                                    I.t("resize dimension as to be in format <n m> or <nxm> or <n*m>."));
+                            return;
+                        }
+                    }
+                    posterData.setScaling(resizeMode());
+                }
+                if (posterData.getWidth() < 0 || posterData.getWidth() > 256
+                        || posterData.getHeight() < 0 || posterData.getHeight() > 256) {
+                    throwInvalidArgument(I.t("You need to specify a valid size. e.g. resize 4 5"));
+                    return;
+                }
             }
             try {
-                ActionBar.sendPermanentMessage(player, ChatColor.DARK_GREEN + I.t("Rendering..."));
+                String message = I.t("&1 Rendering...");
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
                 ImageRendererExecutor.render(posterData, player.getUniqueId(), new WorkerCallback<ImagePoster>() {
                     @Override
                     public void finished(ImagePoster result) {
-                        ActionBar.removeMessage(player);
-                        MessageSender.sendActionBarMessage(player,
-                                ChatColor.DARK_GREEN + I.t("Rendering finished!"));
+                        String message = I.t("&1 Rendering finished!");
+                        TextComponent text = new TextComponent(message);
+                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
 
                         if (result.give(player)
                                 && (result instanceof PosterMap && !((PosterMap) result).hasColumnData())) {
@@ -203,9 +230,14 @@ public class NewCommand extends IoMCommand {
                     }
                 });
             } finally {
-                ActionBar.removeMessage(player);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
             }
+
+        } catch (Exception e) {
+            PluginLogger.warning(e.toString());
+            throwInvalidArgument(I.t("Invalid URL."));
         }
+
     }
 
     @Override

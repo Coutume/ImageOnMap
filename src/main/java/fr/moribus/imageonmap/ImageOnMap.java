@@ -43,6 +43,7 @@ import fr.moribus.imageonmap.commands.maptool.GetCommand;
 import fr.moribus.imageonmap.commands.maptool.GetRemainingCommand;
 import fr.moribus.imageonmap.commands.maptool.GiveCommand;
 import fr.moribus.imageonmap.commands.maptool.ListCommand;
+import fr.moribus.imageonmap.commands.maptool.MigrateCommand;
 import fr.moribus.imageonmap.commands.maptool.NewCommand;
 import fr.moribus.imageonmap.commands.maptool.RemotePlacingCommand;
 import fr.moribus.imageonmap.commands.maptool.RenameCommand;
@@ -78,14 +79,11 @@ import org.bstats.bukkit.Metrics;
 // rework des GUI (map part utile ???);
 // Pouvoir déployer carte à distance;
 // carte interractive (5.1?);
-// bug: hover text ne marche plus;
 // glow effect a refaire (vraiment utile ???);
 // Miniature des maps en 1x1 (migration?);
 // ecrire directement sur les cartes pour ne pas tout perdre(migration);
-// réduire dépendance QL;
-// retirer les prints de QL et IoM => verbose ou debug pour avoir une trace de ce qui est fait ?;
 // bug: suppression image chat (inconnue ?) laisse item frame invisible;
-// passer invisibiliter et glow dans le GUI si permission sinon solution RP avec le nombre qu'il faut de glowsac
+// passer invisibiliter et glow dans le GUI si permission
 // avec un clic droit sur les frames et fenetre en verre pour la protection contre le grief des mobs et potion
 // invisibilité pour rendre frame invisible (peut etre que l'item utilisé pour le craft); proposer craft RP des cartes
 // soit avec un item map vide+ un item de peintre ? soit avec un atelier?
@@ -160,7 +158,6 @@ public final class ImageOnMap extends QuartzPlugin {
             return;
         }
 
-
         saveDefaultConfig();
         commandWorker = loadComponent(CommandWorkers.class);
         loadComponents(I18n.class, Gui.class, Commands.class, PluginConfiguration.class, ImageIOExecutor.class,
@@ -184,7 +181,7 @@ public final class ImageOnMap extends QuartzPlugin {
                 GiveCommand.class,
                 GetRemainingCommand.class,
                 ExploreCommand.class,
-                //MigrateCommand.class,//Removed for now doesn't work nor is useful, maybe useful later on
+                MigrateCommand.class,
                 UpdateCommand.class,
                 RemotePlacingCommand.class
         );

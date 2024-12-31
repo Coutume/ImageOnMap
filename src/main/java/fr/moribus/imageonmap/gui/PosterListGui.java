@@ -154,7 +154,7 @@ public class PosterListGui extends ExplorerGui<ImagePoster> {
             PosterMap poster = (PosterMap) iposter;
 
             if (poster.hasColumnData()) {
-                return SplatterPosterManager.makeSplatterPoster((PosterMap) poster);
+                return SplatterPosterManager.makeSplatterPoster(poster);
             }
 
             PosterItemManager.giveParts(getPlayer(), poster);

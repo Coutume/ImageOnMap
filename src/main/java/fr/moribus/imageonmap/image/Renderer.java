@@ -37,10 +37,12 @@
 package fr.moribus.imageonmap.image;
 
 import fr.zcraft.quartzlib.tools.PluginLogger;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.map.MapCanvas;
+import org.bukkit.map.MapPalette;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 

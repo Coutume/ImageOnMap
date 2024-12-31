@@ -49,8 +49,6 @@ import fr.zcraft.quartzlib.components.worker.WorkerAttributes;
 import fr.zcraft.quartzlib.components.worker.WorkerCallback;
 import fr.zcraft.quartzlib.components.worker.WorkerRunnable;
 import fr.zcraft.quartzlib.tools.PluginLogger;
-import fr.zcraft.quartzlib.tools.text.ActionBar;
-import fr.zcraft.quartzlib.tools.text.MessageSender;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,8 +59,9 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import javax.imageio.ImageIO;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 
@@ -74,25 +73,29 @@ public class ImageRendererExecutor extends Worker {
         if (player == null) {
             return;
         }
-
-        ActionBar.sendPermanentMessage(player, ChatColor.DARK_GREEN + I.t("Rendering..."));
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(I.t("&1 Rendering...")));
 
         render(url, scaling, player.getUniqueId(), width, height, new WorkerCallback<ImagePoster>() {
             @Override
             public void finished(ImagePoster result) {
-                ActionBar.removeMessage(player);
-                MessageSender.sendActionBarMessage(player, ChatColor.DARK_GREEN + I.t("Rendering finished!"));
+                String message = I.t("&1 Rendering finished!");
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
 
                 if (result.give(player) && (result instanceof PosterMap && !((PosterMap) result).hasColumnData())) {
-                    player.sendMessage(ChatColor.GRAY + I.t("The rendered map was too big to fit in your inventory."));
-                    player.sendMessage(ChatColor.GRAY + I.t("Use '/maptool getremaining' to get the remaining maps."));
+                    player.spigot().sendMessage(ChatMessageType.CHAT,
+                            new TextComponent(I.t("&7 The rendered map was too big to fit in your inventory.")));
+                    player.spigot().sendMessage(ChatMessageType.CHAT,
+                            new TextComponent(I.t("&7 Use '/maptool getremaining' to get the remaining maps.")));
                 }
             }
 
             @Override
             public void errored(Throwable exception) {
-                ActionBar.removeMessage(player);
-                player.sendMessage(I.t("{ce}Map rendering failed: {0}", exception.getMessage()));
+                String message = I.t("&C Map rendering failed: {0}", exception.getMessage());
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.CHAT, text);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
 
                 PluginLogger.warning("Rendering from {0} failed: {1}: {2}",
                         player.getName(),

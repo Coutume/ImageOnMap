@@ -54,6 +54,7 @@ import org.bukkit.entity.Player;
 public abstract class IoMCommand extends Command {
     protected UUID getPlayerUUID(String playerName) {
         return Bukkit.getOfflinePlayer(playerName).getUniqueId();
+        //TODO replace with homemade solution using https://api.mojang.com/users/profiles/minecraft/
     }
 
     private boolean checkTooArguments(boolean bool, String msg) throws CommandException {
@@ -72,6 +73,7 @@ public abstract class IoMCommand extends Command {
     }
 
     protected boolean checkArguments(boolean bool1, boolean bool2) throws CommandException {
+        //TODO WTF is happening here
         return !(checkTooManyArguments(bool1) || checkTooFewArguments(bool2));
     }
 

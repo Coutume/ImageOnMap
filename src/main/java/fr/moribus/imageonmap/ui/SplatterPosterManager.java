@@ -45,10 +45,8 @@ import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.tools.PluginLogger;
 import fr.zcraft.quartzlib.tools.items.ItemStackBuilder;
-import fr.zcraft.quartzlib.tools.text.MessageSender;
 import fr.zcraft.quartzlib.tools.world.FlatLocation;
 import fr.zcraft.quartzlib.tools.world.WorldUtils;
-import java.lang.reflect.Method;
 import java.util.Map;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -58,6 +56,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Rotation;
 import org.bukkit.block.BlockFace;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -126,8 +125,8 @@ public abstract class SplatterPosterManager {
      * @return The modified item stack. The instance may be different if the passed item stack is not a craft itemstack.
      */
     public static ItemStack addSplatterAttribute(final ItemStack itemStack) {
-        //GlowEffect.addGlow(itemStack);
-        //TODO find a good solution there without using QL
+        itemStack.addUnsafeEnchantment(Enchantment.LURE, 1);
+        //TODO ADD event to forbid xp duplication and usage in crafting table
         return itemStack;
     }
 
@@ -170,7 +169,7 @@ public abstract class SplatterPosterManager {
      * @return true if the map was correctly placed
      */
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
-    public static boolean placeSplatterPoster(ItemFrame startFrame, Player player, PlayerInteractEntityEvent event) {
+    public static boolean placeSplatterPoster(ItemFrame startFrame, Player player) {
         ImagePoster iposter = PosterManager.getPoster(player.getInventory().getItemInMainHand());
         if (!(iposter instanceof PosterMap)) {
             return false;
@@ -190,17 +189,15 @@ public abstract class SplatterPosterManager {
             surface.loc2 = endLocation;
 
             if (!surface.isValid(player)) {
-                MessageSender.sendActionBarMessage(player,
-                        I.t("{ce}There is not enough space to place this map ({0} × {1}).",
-                                poster.getColumnCount(),
-                                poster.getRowCount()));
-
-
+                String message =
+                        I.t("§c There is not enough space to place this map ({0} × {1}).", poster.getColumnCount(),
+                                poster.getRowCount());
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
                 return false;
             }
             Rotation r = Rotation.NONE;
             BlockFace bf = WorldUtils.get4thOrientation(player.getLocation());
-            PluginLogger.info("bf " + bf);
             PluginLogger.info("YAW calc {0} YAW {1} ", Math.abs(player.getLocation().getYaw()) - 180f,
                     player.getLocation().getYaw());
             switch (bf) {
@@ -226,7 +223,6 @@ public abstract class SplatterPosterManager {
 
                 bf = WorldUtils.get4thOrientation(player.getLocation());
                 int id = poster.getPosterIdAtReverseZ(i, bf, startFrame.getFacing());
-                PluginLogger.info("toto");
                 switch (frame.getFacing()) {
                     case UP:
                         break;
@@ -264,9 +260,6 @@ public abstract class SplatterPosterManager {
             FlatLocation startLocation = new FlatLocation(startFrame.getLocation(), startFrame.getFacing());
             FlatLocation endLocation = startLocation.clone().add(poster.getColumnCount(), poster.getRowCount());
 
-            PluginLogger.info(startLocation.toString());
-            PluginLogger.info(endLocation.toString());
-
             wall.loc1 = startLocation;
             wall.loc2 = endLocation;
 
@@ -275,7 +268,8 @@ public abstract class SplatterPosterManager {
                 String message =
                         I.t("§c There is not enough space to place this map ({0} × {1}).", poster.getColumnCount(),
                                 poster.getRowCount());
-                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+                TextComponent text = new TextComponent(message);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
                 return false;
             }
 
@@ -307,11 +301,6 @@ public abstract class SplatterPosterManager {
                 frame.setItem(item);
             }
         }, 5L);
-        /*RunTask.later(() -> {
-            addPropertiesToFrames(player, frame);
-            ItemStack item = PosterItemManager.createPosterItem(id, "", true, false);
-            frame.setItem(item);
-        }, 5L);*/
     }
 
     /**
@@ -332,7 +321,6 @@ public abstract class SplatterPosterManager {
         }
         //We search for the map on the top left corner
         Location startingLocation = poster.findLocationFirstFrame(startFrame, player);
-        PluginLogger.info("remove splater " + startingLocation);
         Map<Location, ItemFrame>
                 itemFrameLocations =
                 PosterOnASurface.getItemFramesLocation(player, startingLocation, startFrame.getLocation(),
@@ -342,7 +330,7 @@ public abstract class SplatterPosterManager {
         for (Map.Entry<Location, ItemFrame> entry : itemFrameLocations.entrySet()) {
             ItemFrame frame = itemFrameLocations.get(entry.getKey());
             if (frame != null) {
-                removePropertiesFromFrames(player, frame);
+                removePropertiesFromFrames(frame);
                 frame.setItem(null);
             }
         }
@@ -352,21 +340,11 @@ public abstract class SplatterPosterManager {
 
     public static void addPropertiesToFrames(Player player, ItemFrame frame) {
         if (Permissions.PLACE_INVISIBLE_SPLATTER_POSTER.grantedTo(player)) {
-            try {
-                Method setVisible = frame.getClass().getMethod("setVisible", boolean.class);
-                setVisible.invoke(frame, false);
-            } catch (Exception e) {
-                //1.16-
-            }
+            frame.setVisible(false);
         }
     }
 
-    public static void removePropertiesFromFrames(Player player, ItemFrame frame) {
-        try {
-            Method setVisible = frame.getClass().getMethod("setVisible", boolean.class);
-            setVisible.invoke(frame, true);
-        } catch (Exception e) {
-            //1.16-
-        }
+    public static void removePropertiesFromFrames(ItemFrame frame) {
+        frame.setVisible(true);
     }
 }

@@ -39,7 +39,9 @@ package fr.moribus.imageonmap;
 
 import fr.zcraft.quartzlib.tools.PluginLogger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 
@@ -50,7 +52,7 @@ public class Argument {
     private final Status status;
 
     private String content;
-    private String defaultValue;
+    private Object defaultValue;
 
     public Argument(String name, Type type, Status status) {
         this.name = name;
@@ -108,19 +110,19 @@ public class Argument {
         }
         switch (type) {
             case BOOLEAN:
-                return (T) Boolean.valueOf(defaultValue);
+                return (T) Boolean.valueOf((Boolean) defaultValue);
             case INT:
-                return (T) Integer.getInteger(defaultValue);
+                return (T) Integer.getInteger((String) defaultValue);
             case UUID:
-                return (T) UUID.fromString(defaultValue);
+                return (T) UUID.fromString((String) defaultValue);
             case DOUBLE:
-                return (T) Double.valueOf(defaultValue);
+                return (T) Double.valueOf((String) defaultValue);
             case STRING:
                 return (T) defaultValue;
             case ONLINE_PLAYER:
-                return (T) Bukkit.getPlayer(toUUID(defaultValue));
+                return (T) Bukkit.getPlayer(toUUID((String) defaultValue));
             case OFFLINE_PLAYER:
-                return (T) Bukkit.getOfflinePlayer(toUUID(defaultValue));
+                return (T) Bukkit.getOfflinePlayer(toUUID((String) defaultValue));
 
             default:
                 PluginLogger.info("To be implemented");
@@ -232,7 +234,8 @@ public class Argument {
         return false;
     }
 
-    public static List<Argument> parseArguments(List<Argument> prototype, ArrayList<String> args, boolean isPlayer)
+    public static Map<String, Argument> parseArguments(List<Argument> prototype, ArrayList<String> args,
+                                                       boolean isPlayer)
             throws Exception {
         //check if the command is not ambiguous
         if (isAmbiguous(prototype, isPlayer)) {
@@ -240,7 +243,7 @@ public class Argument {
         }
         // givemap Vlammar Vlammar:"carte 1" 10
         // string |string| string <int>
-        List<Argument> list = new ArrayList<>();
+        Map<String, Argument> map = new HashMap<>();
         List<Argument> uncertain = new ArrayList<>();
 
         for (int i = 0; i < args.size(); i++) {
@@ -250,13 +253,11 @@ public class Argument {
             for (int j = i; j < prototype.size(); j++) {
                 PluginLogger.info("j = {0}", j);
                 Argument a = prototype.get(j);
-                PluginLogger.info("argument name: \n{0}", a.toString());
                 switch (a.status) {
-                    case OBLIGATORY:
+                    case MANDATORY:
                         PluginLogger.info("OBLIGATORY");
                         if (uncertain.isEmpty()) {
-                            PluginLogger.info(a.getName());
-                            list.add(a);
+                            map.put(a.getName(), a);
                             a.setContent(arg);
                             PluginLogger.info("argument : \n{0}", a.toString());
                             next = true;
@@ -264,22 +265,18 @@ public class Argument {
                             for (Argument l : uncertain) {
                                 //if size doesnt match or
                                 try {
-                                    PluginLogger.info("test pour l'erreur");
-                                    PluginLogger.info(a.getContent());
                                     a.setContent(a.content); //todo erreur ?
-                                    PluginLogger.info("argument : \n{0}", a.toString());
                                 } catch (Exception e) {
                                     //shift to the right
                                 }
                             }
-                            PluginLogger.info(a.getName());
-                            list.add(a);
+                            map.put(a.getName(), a);
                             uncertain = new ArrayList<>();
                         }
                         break;
                     case OPTIONAL:
-                        PluginLogger.info("OPTIONAL");
                         PluginLogger.info(a.getName());
+                        a.setContent(arg);
                         uncertain.add(a);
                         PluginLogger.info("argument : \n{0}", a.toString());
                         break;
@@ -287,7 +284,7 @@ public class Argument {
                         PluginLogger.info("OPTIONAL_FOR_PLAYER_ONLY");
                         if (!isPlayer) {
                             PluginLogger.info(a.getName());
-                            list.add(a);
+                            map.put(a.getName(), a);
                             a.setContent(arg);
                             PluginLogger.info("argument : \n{0}", a.toString());
                             next = true;
@@ -308,7 +305,7 @@ public class Argument {
                 }
             }
         }
-        return list;
+        return map;
     }
 
     @Override

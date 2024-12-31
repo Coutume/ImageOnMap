@@ -38,14 +38,82 @@ package fr.moribus.imageonmap.commands.maptool;
 
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.commands.IoMCommand;
+import fr.moribus.imageonmap.map.ImagePoster;
+import fr.moribus.imageonmap.map.PlayerPosterStore;
+import fr.moribus.imageonmap.map.PosterManager;
+import fr.moribus.imageonmap.map.PosterMap;
 import fr.zcraft.quartzlib.components.commands.CommandException;
 import fr.zcraft.quartzlib.components.commands.CommandInfo;
+import fr.zcraft.quartzlib.components.i18n.I;
+import java.util.ArrayList;
+import java.util.UUID;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.ItemFrame;
 
-@CommandInfo(name = "RemotePlacing", usageParameters = "[player name]:map name position rotation")
+@CommandInfo(name = "RemotePlacing", usageParameters = "[player name]:mapName worldname x y z [N|W|S|E]")
 public class RemotePlacingCommand extends IoMCommand {
     @Override
     protected void run() throws CommandException {
+        ArrayList<String> arguments = getArgs();
+        String playerName;
+        String mapName;
+        if (arguments.get(1).contains(":")) {
+            playerName = arguments.get(1).split(":")[0];
+            mapName = arguments.get(1).split(":")[1];
+        } else {
+            playerName = playerSender().getName();
+            mapName = arguments.get(1);
+        }
+        UUID uuid = Bukkit.getOfflinePlayer(playerName).getUniqueId();
+        ImagePoster poster = PosterManager.getplayerPosterStore(uuid).getPoster(mapName);
+
+        String worldName = arguments.get(1);
+        World world = Bukkit.getWorld(worldName);
+        Location loc = new Location(world,
+                Integer.parseInt(arguments.get(2)),
+                Integer.parseInt(arguments.get(3)),
+                Integer.parseInt(arguments.get(4)));
+        BlockFace bf = null;
+        //TODO add ground placement and bf for ground ceilling and wall
+        switch (arguments.get(5)) {
+            case "N":
+            case "n":
+            case "North":
+            case "north":
+                bf = BlockFace.NORTH;
+                break;
+            case "E":
+            case "e":
+            case "East":
+            case "east":
+                bf = BlockFace.EAST;
+                break;
+            case "W":
+            case "w":
+            case "West":
+            case "west":
+                bf = BlockFace.WEST;
+                break;
+            case "S":
+            case "s":
+            case "South":
+            case "south":
+                bf = BlockFace.SOUTH;
+                break;
+            default:
+                //or messagesender
+                throwInvalidArgument(I.t("Must specify a valid rotation N|W|S|E|"));
+                break;
+        }
+        ItemFrame i = world.spawn(loc, ItemFrame.class);
+        i.setFacingDirection(bf);
+        world.getBlockAt(loc);
+
+        //summon item frame(location, rotation)
         //if wall => need position and direction N/S/E/W
         //else if floor or ceiling => same + rotation
     }
@@ -54,4 +122,5 @@ public class RemotePlacingCommand extends IoMCommand {
     public boolean canExecute(CommandSender sender) {
         return Permissions.REMOTE_PLACING.grantedTo(sender);
     }
+
 }

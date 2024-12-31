@@ -36,7 +36,10 @@
 
 package fr.moribus.imageonmap.commands.maptool;
 
+import fr.moribus.imageonmap.Argument;
 import fr.moribus.imageonmap.Permissions;
+import fr.moribus.imageonmap.Status;
+import fr.moribus.imageonmap.Type;
 import fr.moribus.imageonmap.commands.IoMCommand;
 import fr.moribus.imageonmap.map.ImagePoster;
 import fr.moribus.imageonmap.map.PosterManager;
@@ -49,7 +52,11 @@ import fr.zcraft.quartzlib.components.rawtext.RawTextPart;
 import fr.zcraft.quartzlib.tools.PluginLogger;
 import fr.zcraft.quartzlib.tools.text.RawMessage;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -70,6 +77,7 @@ public class ListCommand extends IoMCommand {
 
         String playerName;
         final boolean isHuman = (sender instanceof Player);
+
         if (arguments.size() == 1) {
             if (!Permissions.LISTOTHER.grantedTo(sender) && isHuman) {
                 throwNotAuthorized();
@@ -84,6 +92,19 @@ public class ListCommand extends IoMCommand {
                 PluginLogger.warning(I.t("You must give a player name"));
                 return;
             }
+        }
+        try {
+            List<Argument> prototype = new ArrayList<>();
+            prototype.add(new Argument("playerName", Type.STRING, Status.OPTIONAL, playerName));
+            Map<String, Argument> argMap = Argument.parseArguments(prototype, arguments, isHuman);
+
+            for (String key : argMap.keySet()) {
+                Argument arg = argMap.get(key);
+                PluginLogger.info("Arguments : \n name " + arg.getName() + "\n type " + arg.getType()
+                        + "\n status " + arg.getStatus());
+            }
+        } catch (Exception e) {
+            PluginLogger.warning(e.toString());
         }
         final Player playerSender;
         if (isHuman) {
@@ -102,6 +123,7 @@ public class ListCommand extends IoMCommand {
             }
             return;
         }
+
         String msg = I.tn("{white}{bold}{0} map found.",
                 "{white}{bold}{0} maps found.",
                 posterList.size());

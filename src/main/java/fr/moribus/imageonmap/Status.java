@@ -37,5 +37,5 @@
 package fr.moribus.imageonmap;
 
 public enum Status {
-    OBLIGATORY, OPTIONAL, OPTIONAL_FOR_PLAYER_ONLY
+    MANDATORY, OPTIONAL, OPTIONAL_FOR_PLAYER_ONLY
 }

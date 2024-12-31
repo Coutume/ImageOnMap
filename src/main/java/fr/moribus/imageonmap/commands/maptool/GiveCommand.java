@@ -49,6 +49,7 @@ import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.tools.PluginLogger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -58,9 +59,9 @@ import org.bukkit.entity.Player;
 @CommandInfo(name = "give", usageParameters = "<player name> [playerFrom]:<map name> [quantity]")
 public class GiveCommand extends IoMCommand {
     protected List<Argument> commandPrototype() {
-        Argument target = new Argument("target", Type.STRING, Status.OBLIGATORY);
+        Argument target = new Argument("target", Type.STRING, Status.MANDATORY);
         Argument from = new Argument("from", Type.STRING, Status.OPTIONAL_FOR_PLAYER_ONLY);
-        Argument posterName = new Argument("posterName", Type.STRING, Status.OBLIGATORY);
+        Argument posterName = new Argument("posterName", Type.STRING, Status.MANDATORY);
         Argument quantity = new Argument("quantity", Type.INT, Status.OPTIONAL, "1");
 
         List<Argument> list = new ArrayList<>();
@@ -79,10 +80,17 @@ public class GiveCommand extends IoMCommand {
 
         List<Argument> cmdProto = commandPrototype();
         ArrayList<String> arguments = getArgs();
-        Boolean isPlayer = sender != null;
-        List<Argument> args;
+        boolean isPlayer = sender != null;
+        final String posterName;
+        final String from;
+        final String playerName;
+        final int quantity;
         try {
-            args = Argument.parseArguments(cmdProto, arguments, isPlayer);
+            Map<String, Argument> argMap = Argument.parseArguments(cmdProto, arguments, isPlayer);
+            posterName = argMap.get("posterName").getContent();
+            from = argMap.get("from").getContent();
+            playerName = argMap.get("target").getContent();
+            quantity = argMap.get("quantity").getContent();
         } catch (Exception e) {
             PluginLogger.error("Error while parsing command");
             return;
@@ -95,11 +103,12 @@ public class GiveCommand extends IoMCommand {
             return;
         }
 
+        /*
         final String posterName = Argument.findContent("posterName", args);
         final String from = Argument.findContent("from", args);
         final String playerName = Argument.findContent("target", args);
         final int quantity = Argument.findContent("quantity", args);
-
+        */
         PluginLogger.info("quantity {0}", quantity);
         if (posterName == null || from == null || playerName == null) {
             PluginLogger.error("Error one argument is null, check argument names");

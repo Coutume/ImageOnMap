@@ -47,13 +47,12 @@ import fr.zcraft.quartzlib.components.commands.CommandInfo;
 import fr.zcraft.quartzlib.components.i18n.I;
 import fr.zcraft.quartzlib.components.worker.WorkerCallback;
 import fr.zcraft.quartzlib.tools.PluginLogger;
-import fr.zcraft.quartzlib.tools.text.ActionBar;
-import fr.zcraft.quartzlib.tools.text.MessageSender;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.UUID;
-import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -169,8 +168,10 @@ public class UpdateCommand extends IoMCommand {
             try {
                 String msg = I.t("Updating...");
                 if (playerSender != null) {
-                    //TODO tester si player humain
-                    ActionBar.sendPermanentMessage(playerSender, ChatColor.DARK_GREEN + msg);
+                    //TODO test if player human
+                    String message = I.t("&2 Updating...");
+                    TextComponent text = new TextComponent(message);
+                    playerSender.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
                 } else {
                     PluginLogger.info(msg);
                 }
@@ -180,10 +181,9 @@ public class UpdateCommand extends IoMCommand {
                             public void finished(ImagePoster result) {
                                 String msg = I.t("The map was updated using the new image!");
                                 if (playerSender != null) {
-                                    //TODO tester si player humain
-                                    ActionBar.removeMessage(playerSender);
-                                    MessageSender.sendActionBarMessage(playerSender,
-                                            ChatColor.DARK_GREEN + msg);
+                                    String message = I.t("&2 The map was updated using the new image!");
+                                    TextComponent text = new TextComponent(message);
+                                    playerSender.spigot().sendMessage(ChatMessageType.ACTION_BAR, text);
                                 } else {
                                     PluginLogger.info(msg);
                                 }
@@ -192,9 +192,9 @@ public class UpdateCommand extends IoMCommand {
                             @Override
                             public void errored(Throwable exception) {
                                 if (playerSender != null) {
-                                    playerSender
-                                            .sendMessage(
-                                                    I.t("{ce}Map rendering failed: {0}", exception.getMessage()));
+                                    String message = I.t("&C Map rendering failed: {0}", exception.getMessage());
+                                    TextComponent text = new TextComponent(message);
+                                    playerSender.spigot().sendMessage(ChatMessageType.CHAT, text);
                                 }
                                 PluginLogger.warning("Rendering from {0} failed: {1}: {2}",
                                         playerSender.getName(),
@@ -204,7 +204,7 @@ public class UpdateCommand extends IoMCommand {
                         });
             } finally {
                 if (playerSender != null) {
-                    ActionBar.removeMessage(playerSender);
+                    playerSender.spigot().sendMessage(ChatMessageType.ACTION_BAR,new TextComponent(""));
                 }
             }
         } catch (MalformedURLException | CommandException ex) {

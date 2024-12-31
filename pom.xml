@@ -156,24 +156,17 @@
             <version>1.20.4-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.bukkit</groupId>
-            <artifactId>bukkit</artifactId>
-            <version>1.15.2-R0.1-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>fr.zcraft</groupId>
-            <artifactId>quartzlib</artifactId>
-            <version>0.0.7-SNAPSHOT</version>
-        </dependency>
 
         <dependency>
             <groupId>org.bstats</groupId>
             <artifactId>bstats-bukkit</artifactId>
             <version>1.8</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>fr.zcraft</groupId>
+            <artifactId>quartzlib</artifactId>
+            <version>0.0.7-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

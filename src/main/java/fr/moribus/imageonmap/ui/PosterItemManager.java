@@ -103,11 +103,9 @@ public class PosterItemManager implements Listener {
 
     private static boolean give(final Player player, final ItemStack item) {
         boolean given = ItemUtils.give(player, item);
-        //TODO simplify this
         if (given) {
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 1, 1);
         }
-
         return !given;
     }
 
@@ -206,8 +204,8 @@ public class PosterItemManager implements Listener {
      * Returns the item to place to display the (col;row) part of the given poster.
      *
      * @param poster The map to take the part from.
-     * @param x   The x coordinate of the part to display. Starts at 0.
-     * @param y   The y coordinate of the part to display. Starts at 0.
+     * @param x      The x coordinate of the part to display. Starts at 0.
+     * @param y      The y coordinate of the part to display. Starts at 0.
      * @return The map.
      * @throws ArrayIndexOutOfBoundsException If x;y is not inside the map.
      */
@@ -254,7 +252,7 @@ public class PosterItemManager implements Listener {
 
         frame.setItem(new ItemStack(Material.AIR));
         if (SplatterPosterManager.hasSplatterAttributes(posterItem)) {
-            if (!SplatterPosterManager.placeSplatterPoster(frame, player, event)) {
+            if (!SplatterPosterManager.placeSplatterPoster(frame, player)) {
 
                 event.setCancelled(true); //In case of an error allow to cancel map placement
                 return;
@@ -308,7 +306,7 @@ public class PosterItemManager implements Listener {
         if (!PosterManager.managesPoster(frame.getItem())) {
             return;
         }
-        SplatterPosterManager.removePropertiesFromFrames(player, frame);
+        SplatterPosterManager.removePropertiesFromFrames(frame);
         frame.setItem(new ItemStackBuilder(item)
                 .title(getPosterTitle(item))
                 .hideAllAttributes()

@@ -74,6 +74,8 @@ public class ExploreCommand extends IoMCommand {
         }
 
         OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
+        //TODO replace with homemade solution using https://api.mojang.com/users/profiles/minecraft/playername
+        // to get the UUId
         if (sender.isOnline()) {
             Gui.open(sender, new PosterListGui(offlinePlayer, playerName));
         }

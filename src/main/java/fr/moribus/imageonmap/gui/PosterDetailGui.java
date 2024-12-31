@@ -36,7 +36,6 @@
 
 package fr.moribus.imageonmap.gui;
 
-import static fr.zcraft.quartzlib.tools.reflection.Reflection.getFieldValue;
 
 import fr.moribus.imageonmap.Permissions;
 import fr.moribus.imageonmap.map.ImagePoster;
@@ -69,25 +68,12 @@ public class PosterDetailGui extends ExplorerGui<Integer> {
         this.name = name;
     }
 
-    private void setPosterPartCustomModelData(ItemStack item, int x, int y) {
-        int id = 1000;
+    private void setPosterPartCustomModelData(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
 
-
-        String posterId = iposter.getId();
         //TODO make it prettier and fix issues with scrolling
         if (iposter instanceof PosterMap) {
-            PosterMap poster = ((PosterMap) iposter);
-            int columnCount = poster.getColumnCount();
-            int rowCount = poster.getRowCount();
-            if (columnCount == 0 && rowCount == 0) {
-                id = 1008;
-            }
-            if (x == 0 && y == 0 && columnCount > 0 && rowCount > 0) {
-                id = 1001;
-            }
-
-            meta.setCustomModelData(1000);
+            meta.setCustomModelData(1000);//TODO ID was 1000 maybe a bug there to check
             item.setItemMeta(meta);
         }
     }
@@ -97,9 +83,8 @@ public class PosterDetailGui extends ExplorerGui<Integer> {
         final Material partMaterial = y % 2 == x % 2 ? Material.MAP : Material.PAPER;
         ItemStackBuilder builder = new ItemStackBuilder(partMaterial);
         ItemStack itemStack = builder.craftItem();
-        PluginLogger.info("before setmappart");
 
-        setPosterPartCustomModelData(itemStack, x, y);
+        setPosterPartCustomModelData(itemStack);
         builder = new ItemStackBuilder(itemStack);
         builder = builder
                 .title(I.t(getPlayerLocale(), "{green}Map part"))
@@ -253,7 +238,6 @@ public class PosterDetailGui extends ExplorerGui<Integer> {
 
                 if (getParent() != null) {
                     RunTask.later(() -> Gui.open(getPlayer(), this), 1L);
-
                 } else {
                     close();
                 }
